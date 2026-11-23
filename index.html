@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=account-sync"><script defer src="app.js?v=account-sync"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=account-sync"><script defer src="app.js?v=undecided-certification"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -46,7 +46,7 @@
 </section>
 <div class="layout">
 <section class="records">
-<div class="section-head"><h2 id="record-heading">산행 일정</h2><div class="filters"><select id="category-filter" aria-label="모임 종류 필터"><option value="">모든 모임</option><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select><select id="certification-filter" aria-label="인증 유형 필터"><option value="">모든 인증 유형</option><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option></select><select id="filter" aria-label="일정 유형 필터"><option value="">모든 유형</option><option>당일치기</option><option>1박 2일</option><option>2박 3일</option><option>기타</option></select></div></div>
+<div class="section-head"><h2 id="record-heading">산행 일정</h2><div class="filters"><select id="category-filter" aria-label="모임 종류 필터"><option value="">모든 모임</option><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select><select id="certification-filter" aria-label="인증 유형 필터"><option value="">모든 인증 유형</option><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option><option value="undecided">미정</option></select><select id="filter" aria-label="일정 유형 필터"><option value="">모든 유형</option><option>당일치기</option><option>1박 2일</option><option>2박 3일</option><option>기타</option></select></div></div>
 <div class="tabs" aria-label="기록 보기"><button data-view="planned" aria-pressed="true">예정 일정</button><button data-view="certified" aria-pressed="false">완료 인증</button><button data-view="done" aria-pressed="false">완료 일정</button></div>
 <div id="records"></div>
 </section>
@@ -62,7 +62,7 @@
 <div class="dialog-head"><div><span class="eyebrow">일정 기록</span><h2 id="editor-title">산행 상세</h2></div><button id="close" type="button" aria-label="닫기">×</button></div>
 <div class="form-grid">
 <label id="category-field">모임 종류<select name="category"><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select></label>
-<label id="certification-type-field">인증 유형<select name="certificationType"><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option></select></label>
+<label id="certification-type-field">인증 유형<select name="certificationType"><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option><option value="undecided">미정</option></select></label>
 <label><span id="record-name-label">산 이름</span><input name="name" required placeholder="예) 가라산"></label>
 <label>지역<input name="region" placeholder="예) 경남 거제"></label>
 <label>시작 날짜<input name="start" type="date"></label>
