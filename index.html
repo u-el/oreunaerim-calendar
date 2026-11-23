@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=day-color-fills"><script defer src="app.js?v=plus-certification-progress"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=forest-calendar"><script defer src="app.js?v=forest-calendar"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
 </head>
-<body>
+<body class="forest-interface">
 <header><div class="shell top"><a href="./" class="brand"><img class="brand-mascot" src="oreunaerim-calendar-192.png" alt="" width="36" height="36"> 오르내림 캘린더</a><button class="primary" id="add">＋ 새 일정</button></div></header>
 <main class="shell">
 <nav class="activity-menu" aria-label="일정 메뉴">
@@ -22,21 +22,12 @@
 <h2 tabindex="-1" id="certification-heading">인증 현황</h2>
 <div class="certification-cards" id="certification-cards"></div>
 </section>
-<section class="hero">
-<div class="hero-copy"><h1 id="hero-title">오르내림, 다음엔 뭐 할까?</h1><p id="hero-description">같이 오를 산, 같이 먹을 한 끼, 같이 놀러 갈 곳.<br>오르내림의 다음 약속을 한눈에 봐요.</p>
-<figure class="crew" aria-label="오르내림 운영진 캐릭터">
-<img src="crew-glasses.jpeg" alt="안경을 쓰고 손을 흔드는 레서판다" width="100" height="100">
-<img src="crew-hike.jpeg" alt="등산 모자를 쓴 레서판다" width="100" height="100">
-<img src="crew-picnic.jpeg" alt="햄버거와 과자를 든 레서판다" width="100" height="100">
-<img src="crew-grill.jpeg" alt="고기를 굽는 레서판다" width="100" height="100">
-<img src="crew-ribbon.jpeg" alt="리본과 우쿨렐레를 든 레서판다" width="100" height="100">
-<img src="crew-snack.jpeg" alt="도넛과 초콜릿을 든 레서판다" width="100" height="100">
-</figure></div>
-<div class="hero-mascots" id="hero-mascots" hidden><img class="hero-mascot" alt="" width="110" height="110"><img class="hero-mascot" alt="" width="110" height="110"></div>
-
-</section>
 <section class="upcoming" aria-labelledby="upcoming-title">
-<h2 id="upcoming-title">다가오는 일정</h2><div id="upcoming-schedule"></div>
+  <div class="upcoming-content">
+    <h1 id="upcoming-title">다가오는 일정</h1>
+    <div id="upcoming-schedule"></div>
+  </div>
+  <img class="upcoming-mascot" src="crew-hike.jpeg" width="100" height="100" alt="">
 </section>
 <div class="layout calendar-layout">
 <aside class="calendar" aria-label="월별 캘린더">
