@@ -212,7 +212,7 @@ function renderUpcoming(categories) {
   if (mascot) {
     const kind = upcoming ? calendarKind(upcoming) : menu;
     const character = {food:'grill', play:'ribbon', backpacking:'hike'}[kind] || 'hike';
-    mascot.src = 'crew-'+character+'.jpeg';
+    mascot.src = menu === 'all' ? 'forest-hiker-panda.webp' : 'crew-'+character+'.jpeg';
   }
   container.innerHTML = upcoming ? scheduleCard(upcoming, 'planned') : '<p class="upcoming-empty">다가오는 일정이 없어요.</p>';
 }
