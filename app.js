@@ -102,35 +102,14 @@ function renderCertification() {
   cards.innerHTML = ['classic','plus','island'].map(type => {
     const count = countCertifiedPeaks(type);
     const percent = Math.min(100, Math.round(count / goal * 100));
-    return `<div class="certification-count"><span>${certificationTypes[type]}</span>
+    return `<div class="certification-count${count >= goal ? ' is-complete' : ''}">
+      <span class="certification-label">${certificationTypes[type]}${count >= goal ? '<span class="completion-badge">완등</span>' : ''}</span>
       <strong>${count}<small> / ${goal}좌</small></strong>
       <div class="bar" aria-hidden="true"><i style="width:${percent}%"></i></div></div>`;
   }).join('');
 }
 
-const activityBanners = {
-  all: {title:'오르내림, 다음엔 뭐 할까?', description:'같이 오를 산, 같이 먹을 한 끼, 같이 놀러 갈 곳.\n오르내림의 다음 약속을 한눈에 봐요.'},
-  hike: {title:'이번엔 어느 산에 오를까?', description:'가볍게 걷는 산행부터 별 아래 백패킹까지, 같이 오를 날을 골라봐요.', mascots:['glasses','hike']},
-  food: {title:'오늘은 뭐 먹으러 갈까?', description:'궁금했던 맛집도, 산행 뒤 든든한 한 끼도. 맛있는 약속을 잡아봐요.', mascots:['snack','grill']},
-  play: {title:'이번엔 뭐 하고 놀까?', description:'같이 해보고 싶었던 것들을 모아, 신나는 하루를 계획해 봐요.', mascots:['ribbon','picnic']}
-};
-
-function renderBanner() {
-  const banner = activityBanners[menu];
-  $('#hero-title').textContent = banner.title;
-  $('#hero-description').textContent = banner.description;
-  $('.crew').hidden = menu !== 'all';
-  const mascots = $('#hero-mascots');
-  mascots.hidden = !banner.mascots;
-  if (banner.mascots) {
-    mascots.querySelectorAll('img').forEach((image, index) => {
-      image.src = 'crew-' + banner.mascots[index] + '.jpeg';
-    });
-  }
-}
-
 function render() {
-  renderBanner();
   renderCertification();
   const active = menus[menu];
   document.body.dataset.theme = menu;
@@ -214,10 +193,12 @@ function scheduleCard(record, displayView) {
     .filter(line => /^(집결(?:\s*(?:장소|시간))?|출발\s*(?:장소|시간))\s*[:：]/.test(line));
   const details = [...meeting, record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명', record.transport, record.overnight !== '숙박 없음' && record.lodging, gear.length && '준비물 '+gear.filter(item => item.checked).length+'/'+gear.length].filter(Boolean);
   return `<button class="schedule-card card kind-${kind}" type="button" data-record="${escape(record.id)}">
-    <span class="schedule-card-head"><span class="schedule-date">${escape(scheduleDate(record))}</span><span class="schedule-status status-${status}">${statusLabel}</span></span>
-    <strong class="card-title">${escape(title)}</strong>
-    <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
-    ${details.length ? '<span class="meta">'+escape(details.join(' · '))+'</span>' : ''}
+    <span class="schedule-date">${escape(scheduleDate(record))}</span>
+    <span class="schedule-card-body">
+      <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong><span class="schedule-status status-${status}">${statusLabel}</span></span>
+      <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
+      ${details.length ? '<span class="meta">'+escape(details.join(' · '))+'</span>' : ''}
+    </span>
   </button>`;
 }
 
@@ -227,6 +208,12 @@ function renderUpcoming(categories) {
   const upcoming = records.filter(record => record.status === 'planned' && record.start &&
     (record.end || record.start) >= today && categories.includes(categoryOf(record)))
     .sort((first, second) => first.start.localeCompare(second.start))[0];
+  const mascot = $('.upcoming-mascot');
+  if (mascot) {
+    const kind = upcoming ? calendarKind(upcoming) : menu;
+    const character = {food:'grill', play:'ribbon', backpacking:'hike'}[kind] || 'hike';
+    mascot.src = 'crew-'+character+'.jpeg';
+  }
   container.innerHTML = upcoming ? scheduleCard(upcoming, 'planned') : '<p class="upcoming-empty">다가오는 일정이 없어요.</p>';
 }
 
