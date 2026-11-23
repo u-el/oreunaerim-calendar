@@ -59,6 +59,8 @@ let month = new Date(today.slice(0,7)+'-01T00:00:00');
 let selectedDay = '';
 let view = 'planned';
 let menu = 'all';
+const crewMascots = ['glasses', 'hike', 'picnic', 'grill', 'ribbon', 'snack'];
+const crewMascotIndex = {hike:5, food:1, play:3};
 let editing;
 let checks;
 let gear;
@@ -210,8 +212,7 @@ function renderUpcoming(categories) {
     .sort((first, second) => first.start.localeCompare(second.start))[0];
   const mascot = $('.upcoming-mascot');
   if (mascot) {
-    const kind = upcoming ? calendarKind(upcoming) : menu;
-    const character = {food:'grill', play:'ribbon', backpacking:'hike'}[kind] || 'hike';
+    const character = crewMascots[crewMascotIndex[menu]];
     mascot.src = menu === 'all' ? 'forest-hiker-panda.webp' : 'crew-'+character+'.jpeg';
   }
   container.innerHTML = upcoming ? scheduleCard(upcoming, 'planned') : '<p class="upcoming-empty">다가오는 일정이 없어요.</p>';
@@ -378,6 +379,9 @@ $('.activity-menu').onclick = event => {
   const button = event.target.closest('[data-menu]');
   if (!button || button.dataset.menu === menu) return;
   menu = button.dataset.menu;
+  if (Object.hasOwn(crewMascotIndex, menu)) {
+    crewMascotIndex[menu] = (crewMascotIndex[menu] + 1) % crewMascots.length;
+  }
   view = 'planned';
   $('#filter').value = '';
   $('#category-filter').value = '';
