@@ -37,6 +37,17 @@ try {
   readError = true;
 }
 
+const localRecords = () => {
+  const saved = JSON.parse(localStorage.getItem(key) || '[]');
+  if (!Array.isArray(saved)) throw new Error('Invalid local schedules');
+  return saved;
+};
+let sync;
+let account = null;
+let stopSchedules;
+let cloudReady = false;
+let pendingOperation = false;
+
 const form = $('#form');
 const dialog = $('#editor');
 const field = name => form.elements.namedItem(name);
@@ -256,7 +267,8 @@ function addGear() {
   input.focus();
 }
 
-function save(forceDone) {
+async function save(forceDone) {
+  if (pendingOperation) return;
   const start = field('start').value;
   const end = field('end').value;
   field('end').setCustomValidity(end && (!start || end < start) ? '종료 날짜는 시작 날짜와 같거나 이후여야 해요.' : '');
@@ -268,18 +280,29 @@ function save(forceDone) {
   Object.assign(record,{id:editing.id || crypto.randomUUID(),gear,certified:hike ? [...new Set(names(record.name))].filter(name => checks.has(name)) : []});
   if (forceDone) record.status = 'done';
   const nextRecords = [...records.filter(item => item.id !== record.id),record];
+  const uid = account?.uid;
   try {
-    localStorage.setItem(key,JSON.stringify(nextRecords));
+    if (uid) {
+      if (!cloudReady || !navigator.onLine) throw new Error('Unavailable sync');
+      setSyncBusy(true);
+      await sync.saveSchedule(uid, record);
+      if (account?.uid !== uid) return;
+    } else {
+      localStorage.setItem(key,JSON.stringify(nextRecords));
+    }
   } catch {
     form.querySelector('.save-error')?.remove();
     const error = document.createElement('p');
     error.className = 'save-error';
     error.setAttribute('role','alert');
-    error.textContent = '브라우저에서 저장할 수 없어요. 저장 공간이나 브라우저 설정을 확인해 주세요.';
+    error.textContent = uid ? '계정에 저장할 수 없어요. 연결 상태를 확인한 뒤 다시 저장해 주세요.' : '브라우저에서 저장할 수 없어요. 저장 공간이나 브라우저 설정을 확인해 주세요.';
     $('.dialog-actions').before(error);
     return;
   }
-  records = nextRecords;
+  finally {
+    if (uid) setSyncBusy(false);
+  }
+  records = [...records.filter(item => item.id !== record.id),record];
   dialog.close();
   if (!menus[menu].categories.includes(record.category)) {
     menu = ['hike','food','play'].find(key => menus[key].categories.includes(record.category)) || 'all';
@@ -297,12 +320,11 @@ function save(forceDone) {
 }
 
 $('#export-backup').onclick = () => {
-  if (readError) {
+  if (readError && !account) {
     feedback('저장된 기록을 불러올 수 없어 백업할 수 없어요.');
     return;
   }
-  const saved = localStorage.getItem(key);
-  const backup = JSON.stringify({version:1, records:saved ? JSON.parse(saved) : records},null,2);
+  const backup = JSON.stringify({version:1,records},null,2);
   const url = URL.createObjectURL(new Blob([backup],{type:'application/json'}));
   const link = document.createElement('a');
   link.href = url;
@@ -398,3 +420,71 @@ form.onsubmit = event => {
 };
 render();
 if (readError) feedback('저장된 기록을 불러올 수 없어 기본 일정을 표시했어요.');
+
+function setSyncBusy(busy) {
+  pendingOperation = busy;
+  for (const button of document.querySelectorAll('#google-login, #google-logout, #import-local, .dialog-actions button')) {
+    button.disabled = busy;
+  }
+}
+
+function changeAccount(user) {
+  stopSchedules?.();
+  account = user;
+  cloudReady = false;
+  if (dialog.open) dialog.close();
+  view = 'planned';
+  $('#google-login').hidden = Boolean(user);
+  $('#google-logout').hidden = !user;
+  $('#import-local').hidden = true;
+  const status = $('#sync-status');
+  records = [];
+  if (!user) {
+    try {
+      records = localRecords();
+      readError = false;
+    } catch { readError = true; }
+    status.textContent = '이 브라우저에 저장 중';
+    render();
+    return;
+  }
+  status.textContent = '계정 일정 불러오는 중…';
+  render();
+  stopSchedules = sync.observeSchedules(user.uid, incoming => {
+    if (account?.uid !== user.uid) return;
+    cloudReady = true;
+    records = incoming;
+    status.textContent = '동기화 중: ' + (user.email || 'Google 계정');
+    try {
+      const cloudIds = new Set(incoming.map(record => record.id));
+      $('#import-local').hidden = !localRecords().some(record => !cloudIds.has(record.id));
+    } catch { $('#import-local').hidden = true; }
+    render();
+  }, () => {
+    cloudReady = false;
+    status.textContent = '계정 일정에 연결할 수 없어요.';
+  });
+}
+
+async function runAccountAction(action, errorMessage) {
+  if (pendingOperation) return;
+  setSyncBusy(true);
+  try { await action(); }
+  catch { feedback(errorMessage); }
+  finally { setSyncBusy(false); }
+}
+
+if ($('#sync-status')) import('./sync.mjs').then(module => {
+  sync = module;
+  module.observeAccount(changeAccount);
+  $('#google-login').onclick = () => runAccountAction(module.login,'Google 로그인에 실패했어요. 팝업을 허용한 뒤 다시 시도해 주세요.');
+  $('#google-logout').onclick = () => runAccountAction(module.logout,'로그아웃에 실패했어요. 다시 시도해 주세요.');
+  $('#import-local').onclick = () => runAccountAction(async () => {
+    if (!account || !cloudReady || !navigator.onLine) throw new Error('Unavailable sync');
+    const source = new Map(localRecords().map(record => [record.id,record]));
+    await module.importSchedules(account.uid,[...source.values()]);
+    feedback('이 브라우저의 일정을 계정으로 가져왔어요.');
+  },'일정을 가져오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.');
+}).catch(() => {
+  $('#sync-status').textContent = 'Google 연결을 불러올 수 없어요. 이 브라우저에 저장 중이에요.';
+});

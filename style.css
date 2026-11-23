@@ -251,3 +251,6 @@ body[data-theme="play"] .hero{background:linear-gradient(115deg,#dcf2ff,#eae1ff)
 #schedule-details{border:1px solid var(--line);border-radius:12px}
 #schedule-details summary{cursor:pointer;padding:10px 12px;font-weight:700;color:var(--pine)}
 .details-content{display:grid;gap:12px;padding:0 12px 12px}
+
+.sync-panel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;color:var(--dim);font-size:.875rem}
+.sync-panel button{padding:.35rem .65rem}

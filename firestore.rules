@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /accounts/{uid}/schedules/{scheduleId} {
+      function ownsSchedule() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+      allow read: if ownsSchedule();
+      allow create, update: if ownsSchedule()
+        && request.resource.data.id == scheduleId
+        && request.resource.data.name is string
+        && request.resource.data.gear is list
+        && request.resource.data.certified is list;
+    }
+  }
+}
