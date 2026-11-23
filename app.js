@@ -141,12 +141,21 @@ function render() {
     .sort((a,b) => a.start && b.start ? (view === 'planned' ? a.start.localeCompare(b.start) : b.start.localeCompare(a.start)) : Number(!a.start)-Number(!b.start));
   $('#records').innerHTML = list.map(record => {
     const date = (record.start || '').split('-');
+    const plannedCard = view === 'planned';
+    const endDay = plannedCard && record.end && record.start !== record.end
+      ? (record.end.slice(0,7) === record.start.slice(0,7) ? record.end.slice(8) : record.end.slice(5).replace('-', '.'))
+      : '';
     const checked = record.gear.filter(item => item.checked).length;
     const summary = [categories[categoryOf(record)], isHike(categoryOf(record)) ? certificationTypes[certificationTypeOf(record)] : '', record.region || '지역 미정', record.host ? '벙주 '+record.host : '', record.people === '' ? '인원 미정' : record.people+'명', record.overnight === '숙박 없음' ? '' : record.lodging || (record.overnight === '숙박' ? '숙소 미정' : '')].filter(Boolean).join(' · ');
+    const plannedSummary = [record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명'].filter(Boolean).join(' · ');
+    const plannedExtras = [record.transport, record.gear.length && '준비물 '+checked+'/'+record.gear.length].filter(Boolean).join(' · ');
+    const details = plannedCard
+      ? [plannedSummary,plannedExtras]
+      : [summary,dateRange(record) + (record.gear.length ? ' · 준비물 '+checked+'/'+record.gear.length : '')];
     const title = view === 'certified' ? record.certified.join(' · ') : record.name;
-    return `<button class="card" data-record="${escape(record.id)}"><span class="datebox${menu === 'all' && view === 'planned' ? ' '+calendarKind(record) : ''}">${date[0] ? `<span>${escape(date[0])}.${escape(date[1])}</span><strong>${escape(date[2])}</strong>` : '날짜 미정'}</span>
-    <span><strong class="card-title">${escape(title)}</strong><span class="meta">${escape(summary)}</span><span class="meta">${escape(dateRange(record))}${record.gear.length ? ' · 준비물 '+checked+'/'+record.gear.length : ''}</span></span>
-    <span class="badge ${['1박 2일','2박 3일'].includes(record.type) ? 'night' : ''}">${escape(view === 'certified' ? '인증 완료' : record.type || (record.status === 'done' ? '완료' : '유형 미정'))}</span></button>`;
+    return `<button class="card" data-record="${escape(record.id)}"><span class="datebox${plannedCard ? ' '+calendarKind(record) : ''}">${date[0] ? `<span>${escape(date[0])}.${escape(date[1])}</span><strong>${escape(date[2])}${endDay ? '~'+escape(endDay) : ''}</strong>` : '날짜 미정'}</span>
+    <span><strong class="card-title">${escape(title)}</strong>${details.filter(Boolean).map(detail => `<span class="meta">${escape(detail)}</span>`).join('')}</span>
+    ${plannedCard && !record.type ? '' : `<span class="badge ${['1박 2일','2박 3일'].includes(record.type) ? 'night' : ''}">${escape(view === 'certified' ? '인증 완료' : record.type || (record.status === 'done' ? '완료' : '유형 미정'))}</span>`}</button>`;
   }).join('') || (view === 'planned' && !filter && !category && (menu !== 'hike' || !certificationFilter.value)
     ? '<div class="empty empty-planner"><img src="crew-ribbon.jpeg" alt="" width="76" height="76"><div><p>첫 벙을 열어볼까요?</p><button type="button" data-add-schedule>＋ 새 일정</button></div></div>'
     : '<p class="empty">표시할 기록이 없어요.</p>');
@@ -210,6 +219,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   field('end').setCustomValidity('');
   field('name').setCustomValidity('');
   $('#gear-name').value = '';
+  $('#schedule-details').open = false;
   $('#editor-title').textContent = record.id ? '일정 상세' : '새 일정';
   $('#complete').hidden = record.status === 'done';
   renderCategory();
@@ -378,6 +388,10 @@ $('#gear-name').onkeydown = event => {
   }
 };
 $('#complete').onclick = () => save(true);
+form.addEventListener('invalid', event => {
+  const details = event.target.closest('#schedule-details');
+  if (details) details.open = true;
+},true);
 form.onsubmit = event => {
   event.preventDefault();
   save(false);

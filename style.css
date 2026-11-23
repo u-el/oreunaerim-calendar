@@ -242,3 +242,12 @@ body[data-theme="play"] .hero{background:linear-gradient(115deg,#dcf2ff,#eae1ff)
   .day{padding-inline:1px;min-height:68px}
   .day-event-name,.day-more{font-size:.67rem}
 }
+
+.datebox strong{font-size:clamp(.85rem,2.5vw,1.05rem);overflow-wrap:anywhere}
+.datebox.hike{background:#a8ddae!important}
+.datebox.backpacking{background:#d8b6f2!important}
+.datebox.food{background:#ffdc68!important}
+.datebox.play{background:#a3d9ff!important}
+#schedule-details{border:1px solid var(--line);border-radius:12px}
+#schedule-details summary{cursor:pointer;padding:10px 12px;font-weight:700;color:var(--pine)}
+.details-content{display:grid;gap:12px;padding:0 12px 12px}

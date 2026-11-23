@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=calendar-names"><script defer src="app.js?v=calendar-names"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=schedule-details"><script defer src="app.js?v=schedule-details"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -64,16 +64,22 @@
 <label class="full-width-field">일정 유형<select name="type"><option value="">미정</option><option>당일치기</option><option>1박 2일</option><option>2박 3일</option><option>기타</option></select></label>
 <label>벙주<input name="host" placeholder="닉네임 또는 이름"></label>
 <label>동행 인원<input name="people" type="number" min="0" placeholder="미정"></label>
-<label>숙소<input name="lodging" placeholder="미정"></label>
-<label>숙박 여부<select name="overnight"><option value="">미정</option><option>숙박</option><option>숙박 없음</option></select></label>
 <label>교통수단<select name="transport"><option value="">미정</option><option>자차</option><option>카풀</option><option>대중교통</option><option>버스</option><option>기차</option></select></label>
-<label>예산 (원)<input name="budget" type="number" min="0" placeholder="미정"></label>
 <label>일정 상태<select name="status"><option value="planned">예정</option><option value="done">완료</option></select></label>
 </div>
 <fieldset id="certification"><legend>인증 기록</legend><p class="hint">산 이름을 가운데점(·)으로 나누어 여러 산을 기록할 수 있어요.</p><div id="peaks"></div></fieldset>
+<details id="schedule-details"><summary>세부 정보</summary>
+<div class="details-content">
+<div class="form-grid">
+<label>숙소<input name="lodging" placeholder="미정"></label>
+<label>숙박 여부<select name="overnight"><option value="">미정</option><option>숙박</option><option>숙박 없음</option></select></label>
+<label>예산 (원)<input name="budget" type="number" min="0" placeholder="미정"></label>
+</div>
 <fieldset><legend>준비물 체크</legend><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div></fieldset>
 <label>메모<textarea name="memo" rows="2" placeholder="이동 시간, 코스, 식사 등"></textarea></label>
 <label>공지사항 초안<textarea name="notice" rows="5" placeholder="집결 장소, 출발 시간, 코스, 준비물 등을 적어두세요."></textarea></label>
+</div>
+</details>
 <div class="dialog-actions"><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
 </form></dialog>
 <div role="status" id="toast"></div>
