@@ -391,3 +391,7 @@ body.forest-interface[data-theme]{
   .forest-interface .certification-count small{font-size:.67rem}
   .forest-interface :is(#records,#events) .schedule-card{gap:8px}
 }
+
+#editor .dialog-actions{flex-wrap:wrap}
+#delete-schedule{color:#9b2c28;border-color:#dfb7b3}
+#delete-schedule:hover{background:#fff1ef}
