@@ -85,15 +85,17 @@ function certifiedPeaks(type) {
 }
 
 function renderCertification() {
-  const type = $('#stats-certification-type').value;
-  const count = certifiedPeaks(type).size;
-  const hasGoal = type !== 'plus';
-  const percent = Math.min(100, Math.round(count / goal * 100));
-  const progress = hasGoal ? `<div class="bar" aria-hidden="true"><i style="width:${percent}%"></i></div>` : '';
-  $('#stats-progress').innerHTML = `<strong>${count}<small>${hasGoal ? ' / '+goal : ''}좌</small></strong>${progress}<span>${hasGoal ? percent+'% 달성' : '완료 인증 기준'}</span>`;
+  const cards = $('#certification-cards');
+  if (!cards) return;
+  cards.innerHTML = ['classic','plus','island'].map(type => {
+    const count = certifiedPeaks(type).size;
+    const hasGoal = type !== 'plus';
+    const percent = Math.min(100, Math.round(count / goal * 100));
+    return `<div class="certification-count"><span>${certificationTypes[type]}</span>
+      <strong>${count}<small>${hasGoal ? ' / '+goal : ''}좌</small></strong>
+      ${hasGoal ? '<div class="bar" aria-hidden="true"><i style="width:'+percent+'%"></i></div>' : ''}</div>`;
+  }).join('');
 }
-
-$('#stats-certification-type').onchange = renderCertification;
 
 const activityBanners = {
   all: {title:'오르내림, 다음엔 뭐 할까?', description:'같이 오를 산, 같이 먹을 한 끼, 같이 놀러 갈 곳.\n오르내림의 다음 약속을 한눈에 봐요.'},
@@ -125,6 +127,8 @@ function render() {
     button.setAttribute('aria-pressed', button.dataset.menu === menu);
   });
   $('#stats').hidden = menu !== 'hike';
+  const shortcut = $('#certification-shortcut');
+  if (shortcut) shortcut.hidden = menu !== 'all';
   $('[data-view="certified"]').hidden = menu !== 'hike' && menu !== 'all';
   $('#record-heading').textContent = active.label + ' 일정';
   const categoryFilter = $('#category-filter');
@@ -172,13 +176,15 @@ function scheduleCard(record, displayView) {
   const kind = calendarKind(record);
   const certification = isHike(category) && certificationTypes[certificationTypeOf(record)];
   const title = displayView === 'certified' ? record.certified.join(' · ') : record.name;
+  const status = isCompletedCertification(record) ? 'certified' : record.status === 'done' ? 'done' : 'planned';
+  const statusLabel = {planned:'예정',done:'완료',certified:'인증 완료'}[status];
   const labels = [categories[category], record.type, certification === '미정' ? '인증 미정' : certification].filter(Boolean);
   const gear = record.gear || [];
   const meeting = (record.notice || '').split('\n').map(line => line.trim())
     .filter(line => /^(집결(?:\s*(?:장소|시간))?|출발\s*(?:장소|시간))\s*[:：]/.test(line));
   const details = [...meeting, record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명', record.transport, record.overnight !== '숙박 없음' && record.lodging, gear.length && '준비물 '+gear.filter(item => item.checked).length+'/'+gear.length].filter(Boolean);
   return `<button class="schedule-card card kind-${kind}" type="button" data-record="${escape(record.id)}">
-    <span class="schedule-date">${escape(scheduleDate(record))}</span>
+    <span class="schedule-card-head"><span class="schedule-date">${escape(scheduleDate(record))}</span><span class="schedule-status status-${status}">${statusLabel}</span></span>
     <strong class="card-title">${escape(title)}</strong>
     <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
     ${details.length ? '<span class="meta">'+escape(details.join(' · '))+'</span>' : ''}
@@ -212,11 +218,9 @@ function renderCalendar() {
     const count = dayRecords.length;
     const kinds = [...new Set(dayRecords.map(calendarKind))];
     const kindLabels = kinds.map(kind => calendarKindLabels[kind]).join(', ');
-    const fills = kinds.length ? `<span class="day-fills" aria-hidden="true">${kinds.map(kind => `<i class="${kind}"></i>`).join('')}</span>` : '';
-    const firstName = count ? escape(dayRecords[0].name) : '';
-    const more = count > 1 ? `<span class="day-more">외 ${count-1}건</span>` : '';
-    const summary = count ? `<span class="day-summary"><span class="day-event-name">${firstName}</span>${more}</span>` : '';
-    html += `<button class="day ${count ? 'has-event' : ''} ${date === today ? 'today' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${index+1}월 ${day}일${count ? ', 일정 '+count+'건' : ''}${kindLabels ? '· '+kindLabels+' · '+firstName : ''}">${fills}<span class="day-number">${day}</span>${summary}</button>`;
+    const dots = kinds.length ? `<span class="day-dots" aria-hidden="true">${kinds.map(calendarDot).join('')}</span>` : '';
+    const label = [index+1+'월 '+day+'일', date === today ? '오늘' : '', count ? '일정 '+count+'건 · '+kindLabels : ''].filter(Boolean).join(', ');
+    html += `<button type="button" class="day ${date === today ? 'today' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${label}"><span class="day-number">${day}</span>${dots}</button>`;
   }
   $('#calendar').innerHTML = html;
   const events = calendarRecords.filter(record => selectedDay ? includes(record,selectedDay) :
@@ -362,6 +366,11 @@ $('.activity-menu').onclick = event => {
   $('#category-filter').value = '';
   $('#certification-filter').value = '';
   render();
+};
+const certificationShortcut = $('#certification-shortcut');
+if (certificationShortcut) certificationShortcut.onclick = () => {
+  $('[data-menu="hike"]').click();
+  $('#certification-heading').focus();
 };
 field('category').onchange = () => {
   field('name').setCustomValidity('');
