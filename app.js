@@ -237,9 +237,9 @@ function renderCalendar() {
     const count = dayRecords.length;
     const kinds = [...new Set(dayRecords.map(calendarKind))];
     const kindLabels = kinds.map(kind => calendarKindLabels[kind]).join(', ');
-    const dots = kinds.length ? `<span class="day-dots" aria-hidden="true">${kinds.map(calendarDot).join('')}</span>` : '';
+    const fills = kinds.length ? `<span class="day-fills" aria-hidden="true">${kinds.map(kind => `<i class="${kind}"></i>`).join('')}</span>` : '';
     const label = [index+1+'월 '+day+'일', date === today ? '오늘' : '', count ? '일정 '+count+'건 · '+kindLabels : ''].filter(Boolean).join(', ');
-    html += `<button type="button" class="day ${date === today ? 'today' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${label}"><span class="day-number">${day}</span>${dots}</button>`;
+    html += `<button type="button" class="day ${count ? 'has-event' : ''} ${date === today ? 'today' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${label}">${fills}<span class="day-number">${day}</span></button>`;
   }
   $('#calendar').innerHTML = html;
   const events = calendarRecords.filter(record => selectedDay ? includes(record,selectedDay) :
