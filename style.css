@@ -321,9 +321,8 @@ body[data-theme] .hero{margin-top:8px}
 .calendar-layout .day{align-items:center;justify-content:center;gap:3px;min-height:52px;border:1px solid transparent}
 .calendar-layout .day.today{border-color:var(--jade);font-weight:800}
 .calendar-layout .day[aria-pressed=true]{background:var(--pine);color:white}
-.day-dots{display:flex;align-items:center;gap:2px;min-height:5px}
-.day-dots .calendar-dot{width:6px;height:6px;border-radius:50%}
-.day[aria-pressed=true] .calendar-dot{outline:1px solid #fff}
+.calendar-layout .day.has-event{color:#202631}
+.calendar-layout .day.has-event[aria-pressed=true]{color:#202631;border-color:var(--pine)}
 .schedule-card-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
 .schedule-status{border-radius:20px;padding:2px 8px;font-size:.78rem;font-weight:700;white-space:nowrap}
 .status-planned{background:#eee8fa;color:#503886}
