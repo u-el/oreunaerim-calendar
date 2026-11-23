@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=card-colors"><script defer src="app.js?v=empty-certifications"></script>
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
+</head>
+<body>
+<header><div class="shell top"><a href="./" class="brand"><span class="logo" aria-hidden="true">△</span> 오르내림 캘린더</a><button class="primary" id="add">＋ 새 일정</button></div></header>
+<main class="shell">
+<nav class="activity-menu" aria-label="일정 메뉴">
+<button data-menu="all" aria-pressed="true">전체</button>
+<button data-menu="hike" aria-pressed="false">산행</button>
+<button data-menu="food" aria-pressed="false">먹벙</button>
+<button data-menu="play" aria-pressed="false">놀이벙</button>
+</nav>
+<section class="hero">
+<div class="hero-copy"><h1>오르내림, 다음엔 뭐 할까?</h1><p>같이 오를 산, 같이 먹을 한 끼, 같이 놀러 갈 곳.<br>오르내림의 다음 약속을 한눈에 봐요.</p></div>
+<div class="summit">
+<select id="summit-type" aria-label="인증 좌수 유형"><option value="classic">100대 명산</option><option value="plus">100플러스</option><option value="island">섬앤산</option></select>
+<div id="summit-progress" aria-live="polite"></div>
+</div>
+</section>
+<section class="stats" aria-label="산행 현황" id="stats">
+<div class="stat"><select id="stats-certification-type" aria-label="인증 진행률 유형"><option value="classic">100대 명산</option><option value="plus">100플러스</option><option value="island">섬앤산</option></select><div id="stats-progress" aria-live="polite"></div></div>
+<div class="stat"><span>예정 일정</span><strong id="stats-planned-count"></strong><span>일정 탭에서 확인</span></div>
+<div class="stat"><span>완료 인증</span><strong id="stats-certified-count"></strong><span id="stats-certified-label"></span></div>
+</section>
+<div class="layout">
+<section class="records">
+<div class="section-head"><h2 id="record-heading">산행 일정</h2><div class="filters"><select id="category-filter" aria-label="모임 종류 필터"><option value="">모든 모임</option><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select><select id="certification-filter" aria-label="인증 유형 필터"><option value="">모든 인증 유형</option><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option></select><select id="filter" aria-label="일정 유형 필터"><option value="">모든 유형</option><option>당일치기</option><option>1박 2일</option><option>2박 3일</option><option>기타</option></select></div></div>
+<div class="tabs" aria-label="기록 보기"><button data-view="planned" aria-pressed="true">예정 일정</button><button data-view="certified" aria-pressed="false">완료 인증</button><button data-view="done" aria-pressed="false">완료 일정</button></div>
+<div id="records"></div>
+</section>
+<aside class="calendar" aria-label="월별 캘린더">
+<div class="calendar-title"><h2>월별 캘린더</h2><button id="current">이번 달</button></div>
+<div class="calendar-nav"><button id="prev" aria-label="이전 달">‹</button><strong id="month"></strong><button id="next" aria-label="다음 달">›</button></div>
+<div class="calendar-key" id="calendar-key"><span><i class="calendar-dot hike" aria-hidden="true"></i> 산행</span><span><i class="calendar-dot backpacking" aria-hidden="true"></i> 백패킹</span><span data-calendar-kind="food"><i class="calendar-dot food" aria-hidden="true"></i> 먹벙</span><span data-calendar-kind="play"><i class="calendar-dot play" aria-hidden="true"></i> 놀이벙</span></div><div class="grid" id="calendar"></div><div class="calendar-events" id="events"></div>
+</aside>
+</div>
+<footer><button id="export-backup" type="button">백업 내보내기</button> 변경사항은 현재 브라우저에 저장돼요.</footer>
+</main>
+<dialog id="editor"><form id="form">
+<div class="dialog-head"><div><span class="eyebrow">일정 기록</span><h2 id="editor-title">산행 상세</h2></div><button id="close" type="button" aria-label="닫기">×</button></div>
+<div class="form-grid">
+<label id="category-field">모임 종류<select name="category"><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select></label>
+<label id="certification-type-field">인증 유형<select name="certificationType"><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option></select></label>
+<label><span id="record-name-label">산 이름</span><input name="name" required placeholder="예) 가라산"></label>
+<label>지역<input name="region" placeholder="예) 경남 거제"></label>
+<label>시작 날짜<input name="start" type="date"></label>
+<label>종료 날짜<input name="end" type="date"></label>
+<label class="full-width-field">일정 유형<select name="type"><option value="">미정</option><option>당일치기</option><option>1박 2일</option><option>2박 3일</option><option>기타</option></select></label>
+<label>벙주<input name="host" placeholder="닉네임 또는 이름"></label>
+<label>동행 인원<input name="people" type="number" min="0" placeholder="미정"></label>
+<label>숙소<input name="lodging" placeholder="미정"></label>
+<label>숙박 여부<select name="overnight"><option value="">미정</option><option>숙박</option><option>숙박 없음</option></select></label>
+<label>교통수단<select name="transport"><option value="">미정</option><option>자차</option><option>카풀</option><option>대중교통</option><option>버스</option><option>기차</option></select></label>
+<label>예산 (원)<input name="budget" type="number" min="0" placeholder="미정"></label>
+<label>일정 상태<select name="status"><option value="planned">예정</option><option value="done">완료</option></select></label>
+</div>
+<fieldset id="certification"><legend>인증 기록</legend><p class="hint">산 이름을 가운데점(·)으로 나누어 여러 산을 기록할 수 있어요.</p><div id="peaks"></div></fieldset>
+<fieldset><legend>준비물 체크</legend><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div></fieldset>
+<label>메모<textarea name="memo" rows="2" placeholder="이동 시간, 코스, 식사 등"></textarea></label>
+<label>공지사항 초안<textarea name="notice" rows="5" placeholder="집결 장소, 출발 시간, 코스, 준비물 등을 적어두세요."></textarea></label>
+<div class="dialog-actions"><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
+</form></dialog>
+<div role="status" id="toast"></div>
+</body>
+</html>
