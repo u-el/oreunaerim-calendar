@@ -124,7 +124,9 @@ function render() {
     return `<button class="card" data-record="${escape(record.id)}"><span class="datebox${menu === 'all' && view === 'planned' ? ' '+calendarKind(record) : ''}">${date[0] ? `<span>${escape(date[0])}.${escape(date[1])}</span><strong>${escape(date[2])}</strong>` : '날짜 미정'}</span>
     <span><strong class="card-title">${escape(title)}</strong><span class="meta">${escape(summary)}</span><span class="meta">${escape(dateRange(record))}${record.gear.length ? ' · 준비물 '+checked+'/'+record.gear.length : ''}</span></span>
     <span class="badge ${['1박 2일','2박 3일'].includes(record.type) ? 'night' : ''}">${escape(view === 'certified' ? '인증 완료' : record.type || (record.status === 'done' ? '완료' : '유형 미정'))}</span></button>`;
-  }).join('') || '<p class="empty">표시할 기록이 없어요.</p>';
+  }).join('') || (view === 'planned' && !filter && !category && (menu !== 'hike' || !certificationFilter.value)
+    ? '<div class="empty empty-planner"><img src="crew-ribbon.jpeg" alt="" width="76" height="76"><div><p>첫 벙을 열어볼까요?</p><button type="button" data-add-schedule>＋ 새 일정</button></div></div>'
+    : '<p class="empty">표시할 기록이 없어요.</p>');
   renderCalendar();
 }
 
@@ -302,6 +304,10 @@ $('.tabs').onclick = event => {
   document.querySelector(`[data-view="${view}"]`).focus();
 };
 document.addEventListener('click',event => {
+  if (event.target.closest('[data-add-schedule]')) {
+    openEditor();
+    return;
+  }
   const button = event.target.closest('[data-record]');
   if (button) openEditor(records.find(record => record.id === button.dataset.record));
 });

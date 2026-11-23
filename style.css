@@ -199,3 +199,13 @@ body[data-theme="all"] .summit,.summit{
   .summit select,.stat select{padding:.36rem .25rem;font-size:.78rem}
   .calendar{padding:13px}
 }
+
+.crew{display:flex;align-items:center;margin:14px 0 0;padding:4px 0;isolation:isolate}
+.crew img{display:block;width:clamp(46px,7vw,81px);height:auto;aspect-ratio:1;object-fit:cover;border:3px solid white;border-radius:50%;box-shadow:0 3px 9px #39265228;transform:rotate(-6deg)}
+.crew img+img{margin-left:-7px}
+.crew img:nth-child(even){transform:translateY(3px) rotate(6deg)}
+.empty-planner{display:flex;align-items:center;gap:15px;padding:16px;border:1px dashed var(--line);border-radius:17px}
+.empty-planner img{flex:none;object-fit:cover;border-radius:50%}
+.empty-planner p{color:var(--ink);font-weight:700;margin-bottom:6px}
+.empty-planner button{padding:.3rem .65rem;color:var(--pine)}
+@media(max-width:560px){.crew{margin-top:7px}.crew img{width:clamp(40px,13vw,59px)}}
