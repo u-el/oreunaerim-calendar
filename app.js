@@ -101,11 +101,10 @@ function renderCertification() {
   if (!cards) return;
   cards.innerHTML = ['classic','plus','island'].map(type => {
     const count = countCertifiedPeaks(type);
-    const hasGoal = type !== 'plus';
     const percent = Math.min(100, Math.round(count / goal * 100));
     return `<div class="certification-count"><span>${certificationTypes[type]}</span>
-      <strong>${count}<small>${hasGoal ? ' / '+goal : ''}좌</small></strong>
-      ${hasGoal ? '<div class="bar" aria-hidden="true"><i style="width:'+percent+'%"></i></div>' : ''}</div>`;
+      <strong>${count}<small> / ${goal}좌</small></strong>
+      <div class="bar" aria-hidden="true"><i style="width:${percent}%"></i></div></div>`;
   }).join('');
 }
 
