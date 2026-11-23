@@ -230,3 +230,15 @@ body[data-theme="play"] .hero{background:linear-gradient(115deg,#dcf2ff,#eae1ff)
   body:is([data-theme="hike"],[data-theme="food"],[data-theme="play"]) .hero{grid-template-columns:minmax(0,1fr) 100px}
   .hero-mascots .hero-mascot{width:56px}
 }
+
+.day{display:flex;flex-direction:column;align-items:stretch;gap:3px;min-width:0;min-height:70px;padding:4px 2px}
+.day-summary{position:relative;display:grid;gap:2px;line-height:1.12}
+.day-event-name{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  overflow:hidden;overflow-wrap:anywhere;font-size:.72rem;
+}
+.day-more{font-size:.68rem}
+@media(max-width:560px){
+  .day{padding-inline:1px;min-height:68px}
+  .day-event-name,.day-more{font-size:.67rem}
+}

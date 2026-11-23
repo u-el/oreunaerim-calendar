@@ -180,7 +180,10 @@ function renderCalendar() {
     const kinds = [...new Set(dayRecords.map(calendarKind))];
     const kindLabels = kinds.map(kind => calendarKindLabels[kind]).join(', ');
     const fills = kinds.length ? `<span class="day-fills" aria-hidden="true">${kinds.map(kind => `<i class="${kind}"></i>`).join('')}</span>` : '';
-    html += `<button class="day ${count ? 'has-event' : ''} ${date === today ? 'today' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${index+1}월 ${day}일${count ? ', 일정 '+count+'건' : ''}${kindLabels ? ' · '+kindLabels : ''}">${fills}<span class="day-number">${day}</span></button>`;
+    const firstName = count ? escape(dayRecords[0].name) : '';
+    const more = count > 1 ? `<span class="day-more">외 ${count-1}건</span>` : '';
+    const summary = count ? `<span class="day-summary"><span class="day-event-name">${firstName}</span>${more}</span>` : '';
+    html += `<button class="day ${count ? 'has-event' : ''} ${date === today ? 'today' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${index+1}월 ${day}일${count ? ', 일정 '+count+'건' : ''}${kindLabels ? '· '+kindLabels+' · '+firstName : ''}">${fills}<span class="day-number">${day}</span>${summary}</button>`;
   }
   $('#calendar').innerHTML = html;
   const events = calendarRecords.filter(record => selectedDay ? includes(record,selectedDay) :
