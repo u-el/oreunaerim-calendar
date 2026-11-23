@@ -267,6 +267,8 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   $('#gear-name').value = '';
   $('#schedule-details').open = false;
   $('#editor-title').textContent = record.id ? '일정 상세' : '새 일정';
+  const deleteButton = $('#delete-schedule');
+  if (deleteButton) deleteButton.hidden = !record.id;
   $('#complete').textContent = record.status === 'done' ? '완료 취소' : '완료 처리';
   renderCategory();
   renderGear();
@@ -302,6 +304,42 @@ function addGear() {
   input.focus();
 }
 
+function showEditorError(message) {
+  form.querySelector('.save-error')?.remove();
+  const error = document.createElement('p');
+  error.className = 'save-error';
+  error.setAttribute('role','alert');
+  error.textContent = message;
+  $('.dialog-actions').before(error);
+}
+
+async function removeSchedule() {
+  if (pendingOperation || !editing?.id) return;
+  const {id, name} = editing;
+  if (!window.confirm('‘'+name+'’ 일정을 삭제할까요?')) return;
+  const uid = account?.uid;
+  setSyncBusy(true);
+  try {
+    if (uid) {
+      if (!cloudReady || !navigator.onLine) throw new Error('Unavailable sync');
+      await sync.removeSchedule(uid, id);
+      if (account?.uid !== uid) return;
+    } else {
+      const remaining = localRecords().filter(record => record.id !== id);
+      localStorage.setItem(key, JSON.stringify(remaining));
+      records = remaining;
+    }
+    records = records.filter(record => record.id !== id);
+    dialog.close();
+    render();
+    feedback('일정을 삭제했어요.');
+  } catch {
+    if (account?.uid === uid && dialog.open) showEditorError('일정을 삭제하지 못했어요. 연결이나 저장 공간을 확인하고 다시 시도해 주세요.');
+  } finally {
+    setSyncBusy(false);
+  }
+}
+
 async function save(statusOverride) {
   if (pendingOperation) return;
   const start = field('start').value;
@@ -326,12 +364,7 @@ async function save(statusOverride) {
       localStorage.setItem(key,JSON.stringify(nextRecords));
     }
   } catch {
-    form.querySelector('.save-error')?.remove();
-    const error = document.createElement('p');
-    error.className = 'save-error';
-    error.setAttribute('role','alert');
-    error.textContent = uid ? '계정에 저장할 수 없어요. 연결 상태를 확인한 뒤 다시 저장해 주세요.' : '브라우저에서 저장할 수 없어요. 저장 공간이나 브라우저 설정을 확인해 주세요.';
-    $('.dialog-actions').before(error);
+    showEditorError(uid ? '계정에 저장할 수 없어요. 연결 상태를 확인한 뒤 다시 저장해 주세요.' : '브라우저에서 저장할 수 없어요. 저장 공간이나 브라우저 설정을 확인해 주세요.');
     return;
   }
   finally {
@@ -453,6 +486,7 @@ $('#gear-name').onkeydown = event => {
     addGear();
   }
 };
+if ($('#delete-schedule')) $('#delete-schedule').onclick = removeSchedule;
 $('#complete').onclick = () => save(editing.status === 'done' ? 'planned' : 'done');
 form.addEventListener('invalid', event => {
   const details = event.target.closest('#schedule-details');
@@ -497,7 +531,7 @@ function changeAccount(user) {
   stopSchedules = sync.observeSchedules(user.uid, incoming => {
     if (account?.uid !== user.uid) return;
     cloudReady = true;
-    records = incoming;
+    records = incoming.filter(record => record.deleted !== true);
     status.textContent = '동기화 중: ' + (user.email || 'Google 계정');
     try {
       const cloudIds = new Set(incoming.map(record => record.id));
@@ -518,7 +552,7 @@ async function runAccountAction(action, errorMessage) {
   finally { setSyncBusy(false); }
 }
 
-if ($('#sync-status')) import('./sync.mjs').then(module => {
+if ($('#sync-status')) import('./sync.mjs?v=schedule-deletion').then(module => {
   sync = module;
   module.observeAccount(changeAccount);
   $('#google-login').onclick = () => runAccountAction(module.login,'Google 로그인에 실패했어요. 팝업을 허용한 뒤 다시 시도해 주세요.');
