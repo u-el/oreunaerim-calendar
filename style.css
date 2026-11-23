@@ -221,3 +221,12 @@ body[data-theme="play"] .hero{background:linear-gradient(115deg,#dcf2ff,#eae1ff)
   .hero-mascot{width:76px;border-width:3px;border-radius:16px}
   body[data-theme="hike"] .summit{grid-column:1 / -1}
 }
+
+.hero-mascots{display:flex;flex:none;align-items:center}
+.hero-mascots .hero-mascot{width:clamp(68px,9vw,110px)}
+.hero-mascots .hero-mascot:first-child{transform:rotate(-6deg)}
+.hero-mascots .hero-mascot+.hero-mascot{margin-left:-12px;transform:translateY(6px) rotate(6deg)}
+@media(max-width:560px){
+  body:is([data-theme="hike"],[data-theme="food"],[data-theme="play"]) .hero{grid-template-columns:minmax(0,1fr) 100px}
+  .hero-mascots .hero-mascot{width:56px}
+}
