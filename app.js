@@ -80,15 +80,27 @@ function isCompletedCertification(record) {
     type !== 'undecided' && Object.hasOwn(certificationTypes, type) && Boolean(record.certified?.length);
 }
 
-function certifiedPeaks(type) {
-  return new Set(records.filter(record => isCompletedCertification(record) && certificationTypeOf(record) === type).flatMap(record => record.certified));
+function countCertifiedPeaks(type) {
+  const regionsByPeak = new Map();
+  for (const record of records) {
+    if (!isCompletedCertification(record) || certificationTypeOf(record) !== type) continue;
+    const region = (record.region || '').normalize('NFC').trim().replace(/\s+/g, ' ');
+    for (const peak of record.certified) {
+      const name = peak.normalize('NFC').trim();
+      if (!name) continue;
+      if (!regionsByPeak.has(name)) regionsByPeak.set(name, new Set());
+      if (region) regionsByPeak.get(name).add(region);
+    }
+  }
+  // A record without a region does not establish a distinct peak.
+  return [...regionsByPeak.values()].reduce((count, regions) => count + Math.max(1, regions.size), 0);
 }
 
 function renderCertification() {
   const cards = $('#certification-cards');
   if (!cards) return;
   cards.innerHTML = ['classic','plus','island'].map(type => {
-    const count = certifiedPeaks(type).size;
+    const count = countCertifiedPeaks(type);
     const hasGoal = type !== 'plus';
     const percent = Math.min(100, Math.round(count / goal * 100));
     return `<div class="certification-count"><span>${certificationTypes[type]}</span>
