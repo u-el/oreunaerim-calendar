@@ -162,7 +162,7 @@ const calendarDot = kind => `<i class="calendar-dot ${kind}" aria-hidden="true">
 function scheduleDate(record) {
   if (!record.start) return '날짜 미정';
   const format = date => new Intl.DateTimeFormat('ko-KR', {
-    month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul'
+    year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul'
   }).format(new Date(date+'T00:00:00+09:00'));
   return format(record.start) + (record.end && record.end !== record.start ? ' ~ '+format(record.end) : '');
 }
