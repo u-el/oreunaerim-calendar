@@ -239,7 +239,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   $('#gear-name').value = '';
   $('#schedule-details').open = false;
   $('#editor-title').textContent = record.id ? '일정 상세' : '새 일정';
-  $('#complete').hidden = record.status === 'done';
+  $('#complete').textContent = record.status === 'done' ? '완료 취소' : '완료 처리';
   renderCategory();
   renderGear();
   dialog.showModal();
@@ -274,7 +274,7 @@ function addGear() {
   input.focus();
 }
 
-async function save(forceDone) {
+async function save(statusOverride) {
   if (pendingOperation) return;
   const start = field('start').value;
   const end = field('end').value;
@@ -285,7 +285,7 @@ async function save(forceDone) {
   if (!form.reportValidity()) return;
   const record = Object.fromEntries(allFields.map(name => [name,field(name).value.trim()]));
   Object.assign(record,{id:editing.id || crypto.randomUUID(),gear,certified:hike ? [...new Set(names(record.name))].filter(name => checks.has(name)) : []});
-  if (forceDone) record.status = 'done';
+  if (statusOverride) record.status = statusOverride;
   const nextRecords = [...records.filter(item => item.id !== record.id),record];
   const uid = account?.uid;
   try {
@@ -323,7 +323,8 @@ async function save(forceDone) {
     selectedDay = '';
   }
   render();
-  feedback(forceDone ? '일정을 완료 처리했어요.' : '일정을 저장했어요.');
+  const message = {done:'일정을 완료 처리했어요.', planned:'완료를 취소하고 예정 일정으로 돌렸어요.'};
+  feedback(message[statusOverride] || '일정을 저장했어요.');
 }
 
 $('#export-backup').onclick = () => {
@@ -416,14 +417,14 @@ $('#gear-name').onkeydown = event => {
     addGear();
   }
 };
-$('#complete').onclick = () => save(true);
+$('#complete').onclick = () => save(editing.status === 'done' ? 'planned' : 'done');
 form.addEventListener('invalid', event => {
   const details = event.target.closest('#schedule-details');
   if (details) details.open = true;
 },true);
 form.onsubmit = event => {
   event.preventDefault();
-  save(false);
+  save();
 };
 render();
 if (readError) feedback('저장된 기록을 불러올 수 없어 기본 일정을 표시했어요.');
