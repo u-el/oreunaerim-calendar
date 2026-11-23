@@ -3,20 +3,14 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=account-sync"><script defer src="app.js?v=undecided-certification"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=calendar-layout"><script defer src="app.js?v=calendar-layout"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
 </head>
 <body>
-<header><div class="shell top"><a href="./" class="brand"><span class="logo" aria-hidden="true">△</span> 오르내림 캘린더</a><button class="primary" id="add">＋ 새 일정</button></div></header>
+<header><div class="shell top"><a href="./" class="brand"><img class="brand-mascot" src="crew-hike.jpeg" alt="" width="36" height="36"> 오르내림 캘린더</a><button class="primary" id="add">＋ 새 일정</button></div></header>
 <main class="shell">
-<section class="sync-panel" aria-label="계정 동기화">
-  <span id="sync-status" role="status">이 브라우저에 저장 중</span>
-  <button id="google-login" type="button" hidden>Google로 로그인</button>
-  <button id="import-local" type="button" hidden>이 브라우저의 일정 가져오기</button>
-  <button id="google-logout" type="button" hidden>로그아웃</button>
-</section>
 <nav class="activity-menu" aria-label="일정 메뉴">
 <button data-menu="all" aria-pressed="true">전체</button>
 <button data-menu="hike" aria-pressed="false">산행</button>
@@ -34,29 +28,33 @@
 <img src="crew-snack.jpeg" alt="도넛과 초콜릿을 든 레서판다" width="100" height="100">
 </figure></div>
 <div class="hero-mascots" id="hero-mascots" hidden><img class="hero-mascot" alt="" width="110" height="110"><img class="hero-mascot" alt="" width="110" height="110"></div>
-<div class="summit">
-<select id="summit-type" aria-label="인증 좌수 유형"><option value="classic">100대 명산</option><option value="plus">100플러스</option><option value="island">섬앤산</option></select>
-<div id="summit-progress" aria-live="polite"></div>
-</div>
+
 </section>
-<section class="stats" aria-label="산행 현황" id="stats">
-<div class="stat"><select id="stats-certification-type" aria-label="인증 진행률 유형"><option value="classic">100대 명산</option><option value="plus">100플러스</option><option value="island">섬앤산</option></select><div id="stats-progress" aria-live="polite"></div></div>
-<div class="stat"><span>예정 일정</span><strong id="stats-planned-count"></strong><span>일정 탭에서 확인</span></div>
-<div class="stat"><span>완료 인증</span><strong id="stats-certified-count"></strong><span id="stats-certified-label"></span></div>
+<section class="upcoming" aria-labelledby="upcoming-title">
+<h2 id="upcoming-title">다가오는 일정</h2><div id="upcoming-schedule"></div>
 </section>
-<div class="layout">
-<section class="records">
-<div class="section-head"><h2 id="record-heading">산행 일정</h2><div class="filters"><select id="category-filter" aria-label="모임 종류 필터"><option value="">모든 모임</option><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select><select id="certification-filter" aria-label="인증 유형 필터"><option value="">모든 인증 유형</option><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option><option value="undecided">미정</option></select><select id="filter" aria-label="일정 유형 필터"><option value="">모든 유형</option><option>당일치기</option><option>1박 2일</option><option>2박 3일</option><option>기타</option></select></div></div>
-<div class="tabs" aria-label="기록 보기"><button data-view="planned" aria-pressed="true">예정 일정</button><button data-view="certified" aria-pressed="false">완료 인증</button><button data-view="done" aria-pressed="false">완료 일정</button></div>
-<div id="records"></div>
-</section>
+<div class="layout calendar-layout">
 <aside class="calendar" aria-label="월별 캘린더">
 <div class="calendar-title"><h2>월별 캘린더</h2><button id="current">이번 달</button></div>
 <div class="calendar-nav"><button id="prev" aria-label="이전 달">‹</button><strong id="month"></strong><button id="next" aria-label="다음 달">›</button></div>
 <div class="calendar-key" id="calendar-key"><span><i class="calendar-dot hike" aria-hidden="true"></i> 산행</span><span><i class="calendar-dot backpacking" aria-hidden="true"></i> 백패킹</span><span data-calendar-kind="food"><i class="calendar-dot food" aria-hidden="true"></i> 먹벙</span><span data-calendar-kind="play"><i class="calendar-dot play" aria-hidden="true"></i> 놀이벙</span></div><div class="grid" id="calendar"></div><div class="calendar-events" id="events"></div>
 </aside>
+
+<section class="records">
+<div class="section-head"><h2 id="record-heading">산행 일정</h2><div class="filters"><select id="category-filter" aria-label="모임 종류 필터"><option value="">모든 모임</option><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select><select id="certification-filter" aria-label="인증 유형 필터"><option value="">모든 인증 유형</option><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option><option value="undecided">미정</option></select><select id="filter" aria-label="일정 유형 필터"><option value="">모든 유형</option><option>당일치기</option><option>1박 2일</option><option>2박 3일</option><option>기타</option></select></div></div>
+<div class="tabs" aria-label="기록 보기"><button data-view="planned" aria-pressed="true">예정 일정</button><button data-view="certified" aria-pressed="false">완료 인증</button><button data-view="done" aria-pressed="false">완료 일정</button></div>
+<div id="records"></div>
+</section>
+<section class="stats certification-panel" aria-labelledby="certification-heading" id="stats" hidden>
+<div class="stat"><h2 id="certification-heading">인증 현황</h2><select id="stats-certification-type" aria-label="인증 진행률 유형"><option value="classic">100대 명산</option><option value="plus">100플러스</option><option value="island">섬앤산</option></select><div id="stats-progress" aria-live="polite"></div></div>
+</section>
 </div>
-<footer><button id="export-backup" type="button">백업 내보내기</button></footer>
+<footer><div class="sync-panel" aria-label="계정 동기화">
+  <span id="sync-status" role="status">이 브라우저에 저장 중</span>
+  <button id="google-login" type="button" hidden>Google로 로그인</button>
+  <button id="import-local" type="button" hidden>이 브라우저의 일정 가져오기</button>
+  <button id="google-logout" type="button" hidden>로그아웃</button>
+</div><button id="export-backup" type="button">백업 내보내기</button></footer>
 </main>
 <dialog id="editor"><form id="form">
 <div class="dialog-head"><div><span class="eyebrow">일정 기록</span><h2 id="editor-title">산행 상세</h2></div><button id="close" type="button" aria-label="닫기">×</button></div>
