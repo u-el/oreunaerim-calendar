@@ -209,3 +209,15 @@ body[data-theme="all"] .summit,.summit{
 .empty-planner p{color:var(--ink);font-weight:700;margin-bottom:6px}
 .empty-planner button{padding:.3rem .65rem;color:var(--pine)}
 @media(max-width:560px){.crew{margin-top:7px}.crew img{width:clamp(40px,13vw,59px)}}
+
+#hero-description{white-space:pre-line}
+.hero-mascot{flex:none;width:clamp(95px,13vw,150px);height:auto;aspect-ratio:1;object-fit:cover;border:5px solid white;border-radius:26px;box-shadow:0 6px 18px #39265222;transform:rotate(5deg)}
+body[data-theme="hike"] .hero{background:linear-gradient(115deg,#e1f6de,#fff7d5)}
+body[data-theme="food"] .hero{background:linear-gradient(115deg,#fff0ad,#ffe4d8)}
+body[data-theme="play"] .hero{background:linear-gradient(115deg,#dcf2ff,#eae1ff)}
+@media(min-width:561px) and (max-width:820px){body[data-theme="hike"] .hero{flex-wrap:wrap}}
+@media(max-width:560px){
+  body:is([data-theme="hike"],[data-theme="food"],[data-theme="play"]) .hero{grid-template-columns:minmax(0,1fr) 76px}
+  .hero-mascot{width:76px;border-width:3px;border-radius:16px}
+  body[data-theme="hike"] .summit{grid-column:1 / -1}
+}

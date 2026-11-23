@@ -88,14 +88,33 @@ $('#stats-certification-type').onchange = event => {
   renderCertification();
 };
 
+const activityBanners = {
+  all: {title:'오르내림, 다음엔 뭐 할까?', description:'같이 오를 산, 같이 먹을 한 끼, 같이 놀러 갈 곳.\n오르내림의 다음 약속을 한눈에 봐요.'},
+  hike: {title:'이번엔 어느 산에 오를까?', description:'가볍게 걷는 산행부터 별 아래 백패킹까지, 같이 오를 날을 골라봐요.', mascot:'hike'},
+  food: {title:'오늘은 뭐 먹으러 갈까?', description:'궁금했던 맛집도, 산행 뒤 든든한 한 끼도. 맛있는 약속을 잡아봐요.', mascot:'snack'},
+  play: {title:'이번엔 뭐 하고 놀까?', description:'같이 해보고 싶었던 것들을 모아, 신나는 하루를 계획해 봐요.', mascot:'ribbon'}
+};
+
+function renderBanner() {
+  const banner = activityBanners[menu];
+  $('#hero-title').textContent = banner.title;
+  $('#hero-description').textContent = banner.description;
+  $('.crew').hidden = menu !== 'all';
+  $('.summit').hidden = menu === 'food' || menu === 'play';
+  const mascot = $('#hero-mascot');
+  mascot.hidden = !banner.mascot;
+  if (banner.mascot) mascot.src = 'crew-' + banner.mascot + '.jpeg';
+}
+
 function render() {
+  renderBanner();
   renderCertification();
   const active = menus[menu];
   document.body.dataset.theme = menu;
   document.querySelectorAll('[data-menu]').forEach(button => {
     button.setAttribute('aria-pressed', button.dataset.menu === menu);
   });
-  $('.hero').hidden = $('#stats').hidden = $('[data-view="certified"]').hidden = menu !== 'hike' && menu !== 'all';
+  $('#stats').hidden = $('[data-view="certified"]').hidden = menu !== 'hike' && menu !== 'all';
   $('#record-heading').textContent = active.label + ' 일정';
   const categoryFilter = $('#category-filter');
   categoryFilter.hidden = active.categories.length === 1;
