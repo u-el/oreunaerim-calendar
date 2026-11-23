@@ -149,9 +149,28 @@ function render() {
     .filter(record => (!filter || record.type === filter) && active.categories.includes(categoryOf(record)) && (!category || categoryOf(record) === category))
     .filter(record => menu !== 'hike' || !certificationFilter.value || certificationTypeOf(record) === certificationFilter.value)
     .sort((a,b) => a.start && b.start ? (view === 'planned' ? a.start.localeCompare(b.start) : b.start.localeCompare(a.start)) : Number(!a.start)-Number(!b.start));
-  $('#records').innerHTML = list.map(record => scheduleCard(record, view)).join('') || (view === 'planned' && !filter && !category && (menu !== 'hike' || !certificationFilter.value)
+  const recordsPanel = $('#records');
+  const previewLimit = 5;
+  const canExpand = menu === 'all' && list.length > previewLimit;
+  const scope = JSON.stringify([view, filter, category]);
+  const previous = $('#more-schedules');
+  const expanded = previous?.dataset.scope === scope && previous.open;
+  const shown = canExpand ? list.slice(0, previewLimit) : list;
+  recordsPanel.innerHTML = shown.map(record => scheduleCard(record, view)).join('') || (view === 'planned' && !filter && !category && (menu !== 'hike' || !certificationFilter.value)
     ? '<div class="empty empty-planner"><img src="crew-ribbon.jpeg" alt="" width="76" height="76"><div><p>첫 벙을 열어볼까요?</p><button type="button" data-add-schedule>＋ 새 일정</button></div></div>'
     : '<p class="empty">표시할 기록이 없어요.</p>');
+  if (canExpand) {
+    const rest = list.slice(previewLimit);
+    const expandLabel = '일정 '+rest.length+'개 더 보기';
+    recordsPanel.insertAdjacentHTML('beforeend',
+      `<details id="more-schedules"${expanded ? ' open' : ''}>
+        <summary>${expanded ? '일정 접기' : expandLabel}</summary>
+        ${rest.map(record => scheduleCard(record, view)).join('')}
+      </details>`);
+    const more = $('#more-schedules');
+    more.dataset.scope = scope;
+    more.ontoggle = () => more.querySelector('summary').textContent = more.open ? '일정 접기' : expandLabel;
+  }
   renderCalendar();
 }
 
