@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
-import { getFirestore, collection, doc, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
+import { getFirestore, collection, doc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const app = initializeApp({
   apiKey: 'AIzaSyAvNt0OvhibmXN4wZr1gjP2UZMO91jnyR8',
@@ -36,7 +36,22 @@ export function logout() {
 }
 
 export function saveSchedule(uid, record) {
-  return setDoc(doc(schedules(uid),record.id), record);
+  const ref = doc(schedules(uid), record.id);
+  return runTransaction(db, async transaction => {
+    const current = await transaction.get(ref);
+    if (current.data()?.deleted === true) throw new Error('Schedule was deleted');
+    transaction.set(ref, record);
+  });
+}
+
+export function removeSchedule(uid, id) {
+  const ref = doc(schedules(uid), id);
+  return runTransaction(db, async transaction => {
+    const current = await transaction.get(ref);
+    if (current.exists() && current.data().deleted !== true) {
+      transaction.update(ref, {deleted: true});
+    }
+  });
 }
 
 export async function importSchedules(uid, records) {
