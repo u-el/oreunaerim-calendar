@@ -12,7 +12,7 @@ const categories = {
   play: '오르내림 놀이벙',
   'club-other': '오르내림 기타'
 };
-const certificationTypes = {classic:'100대 명산',plus:'100플러스 명산',island:'섬앤산'};
+const certificationTypes = {classic:'100대 명산',plus:'100플러스 명산',island:'섬앤산',undecided:'미정'};
 const certificationTypeOf = record => record.certificationType || 'island';
 const categoryOf = record => record.category || 'personal';
 const menus = {
