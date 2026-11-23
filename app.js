@@ -74,8 +74,14 @@ function feedback(message) {
   toastTimer = setTimeout(() => $('#toast').textContent = '', 3200);
 }
 
+function isCompletedCertification(record) {
+  const type = certificationTypeOf(record);
+  return record.status === 'done' && isHike(categoryOf(record)) &&
+    type !== 'undecided' && Object.hasOwn(certificationTypes, type) && Boolean(record.certified?.length);
+}
+
 function certifiedPeaks(type) {
-  return new Set(records.filter(record => certificationTypeOf(record) === type).flatMap(record => record.certified));
+  return new Set(records.filter(record => isCompletedCertification(record) && certificationTypeOf(record) === type).flatMap(record => record.certified));
 }
 
 function renderCertification() {
@@ -134,7 +140,7 @@ function render() {
   document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',button.dataset.view === view));
   const filter = $('#filter').value;
   const category = $('#category-filter').value;
-  const list = (view === 'certified' ? records.filter(record => record.certified.length) :
+  const list = (view === 'certified' ? records.filter(isCompletedCertification) :
     records.filter(record => record.status === view))
     .filter(record => (!filter || record.type === filter) && active.categories.includes(categoryOf(record)) && (!category || categoryOf(record) === category))
     .filter(record => menu !== 'hike' || !certificationFilter.value || certificationTypeOf(record) === certificationFilter.value)
@@ -314,7 +320,7 @@ async function save(statusOverride) {
   if (!menus[menu].categories.includes(record.category)) {
     menu = ['hike','food','play'].find(key => menus[key].categories.includes(record.category)) || 'all';
   }
-  view = record.status === 'planned' ? 'planned' : record.certified.length ? 'certified' : 'done';
+  view = record.status === 'planned' ? 'planned' : isCompletedCertification(record) ? 'certified' : 'done';
   if ($('#filter').value && $('#filter').value !== record.type) $('#filter').value = '';
   if ($('#category-filter').value && $('#category-filter').value !== record.category) $('#category-filter').value = '';
   if ($('#certification-filter').value && $('#certification-filter').value !== record.certificationType) $('#certification-filter').value = '';
