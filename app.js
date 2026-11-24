@@ -174,10 +174,10 @@ const calendarKind = record => {
 };
 const calendarDot = kind => `<i class="calendar-dot ${kind}" aria-hidden="true"></i>`;
 
-function scheduleDate(record) {
+function scheduleDate(record, includeYear) {
   if (!record.start) return '날짜 미정';
   const format = date => new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul'
+    year: includeYear ? 'numeric' : undefined, month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul'
   }).format(new Date(date+'T00:00:00+09:00'));
   return format(record.start) + (record.end && record.end !== record.start ? ' ~ '+format(record.end) : '');
 }
@@ -195,7 +195,7 @@ function scheduleCard(record, displayView) {
     .filter(line => /^(집결(?:\s*(?:장소|시간))?|출발\s*(?:장소|시간))\s*[:：]/.test(line));
   const details = [...meeting, record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명', record.transport, record.overnight !== '숙박 없음' && record.lodging, gear.length && '준비물 '+gear.filter(item => item.checked).length+'/'+gear.length].filter(Boolean);
   return `<button class="schedule-card card kind-${kind}" type="button" data-record="${escape(record.id)}">
-    <span class="schedule-date">${escape(scheduleDate(record))}</span>
+    <span class="schedule-date">${escape(scheduleDate(record, displayView !== 'month'))}</span>
     <span class="schedule-card-body">
       <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong><span class="schedule-status status-${status}">${statusLabel}</span></span>
       <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
@@ -245,7 +245,7 @@ function renderCalendar() {
     record.start && record.start <= prefix+'-31' && (record.end || record.start) >= prefix+'-01');
   events.sort((a,b) => a.start.localeCompare(b.start));
   $('#events').innerHTML = `<h3>${selectedDay ? fmt(selectedDay) + ' 일정' : '이달의 일정'}</h3>` +
-    (events.map(record => scheduleCard(record, 'calendar')).join('') || '<span class="hint">등록된 일정이 없어요.</span>');
+    (events.map(record => scheduleCard(record, selectedDay ? 'calendar' : 'month')).join('') || '<span class="hint">등록된 일정이 없어요.</span>');
 }
 
 function openEditor(record = {...blank(),start:selectedDay,category:$('#category-filter').value || menus[menu].categories[0]}) {
