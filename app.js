@@ -442,6 +442,8 @@ function showScheduleShare(mode, record) {
   $('#schedule-share-copy').hidden = mode !== 'send';
   $('#schedule-share-save').hidden = mode !== 'receive';
   $('#schedule-share-url-row').hidden = true;
+  const help = loginBrowserHelp(true);
+  if (help) help.hidden = true;
   $('#schedule-share-url').value = '';
   $('#schedule-share-status').textContent = record ? '' : '공유 링크를 읽을 수 없어요.';
   const values = record ? Object.entries(sharedFields).filter(([key]) => record[key]).map(([key,label]) => {
@@ -462,6 +464,75 @@ function updateScheduleShare() {
   button.disabled = !sharedSchedule || pendingOperation || !!existing || (account ? !cloudReady : !sync);
   if (account && !cloudReady && sharedSchedule) {
     $('#schedule-share-status').textContent = $('#sync-status').textContent;
+  }
+}
+
+function loginBrowserHelp(shared) {
+  return $(shared ? '#share-login-help' : '#calendar-login-help');
+}
+
+function showLoginHelp(shared, message) {
+  const help = loginBrowserHelp(shared);
+  if (!help) {
+    if (shared) $('#schedule-share-status').textContent = message;
+    else feedback(message);
+    return;
+  }
+  help.querySelector('[role="status"]').textContent = message;
+  help.hidden = false;
+}
+
+async function loginWithBrowserHelp(shared = false) {
+  if (!sync || pendingOperation) return;
+  const help = loginBrowserHelp(shared);
+  if (help) {
+    help.hidden = true;
+    help.querySelector('input').hidden = true;
+  }
+  const status = shared ? $('#schedule-share-status') : null;
+  if (status) status.textContent = '';
+  if (/KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV/i.test(navigator.userAgent)) {
+    showLoginHelp(shared, '앱 안에서 구글 로그인 창이 열리지 않을 수 있어요. 링크를 복사해 Safari나 Chrome 주소창에 붙여넣고 다시 눌러 주세요.');
+    return;
+  }
+  setSyncBusy(true);
+  if (status) status.textContent = 'Google 로그인 창을 확인해 주세요.';
+  try {
+    await sync.login();
+    if (status && shareMode === 'receive') status.textContent = '로그인했어요. 내 캘린더에 담기를 눌러 주세요.';
+  } catch (error) {
+    if (shared && (shareMode !== 'receive' || !$('#schedule-share-dialog').open)) return;
+    if (status) status.textContent = '';
+    const message = {
+      'auth/popup-blocked':'구글 로그인 팝업이 차단됐어요. 이 사이트의 팝업을 허용한 뒤 다시 누르거나 Safari·Chrome에서 링크를 열어 주세요.',
+      'auth/popup-closed-by-user':'구글 로그인 창이 닫혔어요. 다시 누르거나 Safari·Chrome에서 링크를 열어 주세요.',
+      'auth/cancelled-popup-request':'구글 로그인 요청이 취소됐어요. 다시 눌러 주세요.',
+      'auth/network-request-failed':'인터넷 연결을 확인한 뒤 다시 눌러 주세요.',
+      'auth/unauthorized-domain':'이 주소의 구글 로그인이 설정에 등록되지 않았어요. 운영진에게 알려 주세요.'
+    }[error?.code];
+    showLoginHelp(shared, message || '구글 로그인 창을 열지 못했어요. 링크를 복사해 Safari나 Chrome에서 다시 시도해 주세요.');
+  } finally {
+    setSyncBusy(false);
+  }
+}
+
+function initLoginBrowserHelp() {
+  for (const help of document.querySelectorAll('[data-login-help]')) {
+    help.querySelector('button').onclick = async () => {
+      const link = location.href;
+      const status = help.querySelector('[role="status"]');
+      try {
+        await navigator.clipboard.writeText(link);
+        status.textContent = '링크를 복사했어요. Safari나 Chrome 주소창에 붙여넣어 주세요.';
+      } catch {
+        const input = help.querySelector('input');
+        input.hidden = false;
+        input.value = link;
+        input.focus();
+        input.select();
+        status.textContent = '링크를 길게 눌러 복사한 뒤 Safari나 Chrome에서 열어 주세요.';
+      }
+    };
   }
 }
 
@@ -507,16 +578,7 @@ function initScheduleShare() {
     if (!sharedSchedule || !sync || pendingOperation) return;
     const status = $('#schedule-share-status');
     if (!account) {
-      setSyncBusy(true);
-      status.textContent = 'Google 로그인 중…';
-      try {
-        await sync.login();
-        status.textContent = '로그인했어요. 일정을 담으려면 아래 버튼을 눌러 주세요.';
-      } catch {
-        status.textContent = '로그인하지 못했어요. 카카오톡에서 열었다면 Safari나 Chrome에서 링크를 열어 보세요.';
-      } finally {
-        setSyncBusy(false);
-      }
+      await loginWithBrowserHelp(true);
       return;
     }
     if (!cloudReady) return;
@@ -1663,6 +1725,7 @@ form.onsubmit = event => {
   event.preventDefault();
   save();
 };
+initLoginBrowserHelp();
 if ($('#schedule-share-dialog')) initScheduleShare();
 render();
 if (readError) feedback('저장된 기록을 불러올 수 없어 기본 일정을 표시했어요.');
@@ -1678,6 +1741,9 @@ function setSyncBusy(busy) {
 function changeAccount(user) {
   stopSchedules?.();
   account = user;
+  if (user) {
+    for (const help of document.querySelectorAll('[data-login-help]')) help.hidden = true;
+  }
   cloudReady = false;
   if (dialog.open) dialog.close();
   view = 'planned';
@@ -1731,7 +1797,7 @@ if ($('#sync-status')) import('./sync.mjs?v=schedule-sharing').then(module => {
   sync = module;
   updateScheduleShare();
   module.observeAccount(changeAccount);
-  $('#google-login').onclick = () => runAccountAction(module.login,'Google 로그인에 실패했어요. 팝업을 허용한 뒤 다시 시도해 주세요.');
+  $('#google-login').onclick = () => loginWithBrowserHelp();
   $('#google-logout').onclick = () => runAccountAction(module.logout,'로그아웃에 실패했어요. 다시 시도해 주세요.');
   $('#import-local').onclick = () => runAccountAction(async () => {
     if (!account || !cloudReady || !navigator.onLine) throw new Error('Unavailable sync');
