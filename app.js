@@ -462,9 +462,18 @@ function updateScheduleShare() {
   const existing = account && records.some(item => item.id === sharedSchedule?.id);
   button.textContent = existing ? '이미 담은 일정이에요' : account ? '내 캘린더에 담기' : 'Google 로그인하고 담기';
   button.disabled = !sharedSchedule || pendingOperation || !!existing || (account ? !cloudReady : !sync);
+  const browserHandoff = Boolean(sharedSchedule && !account && isInAppLoginBrowser() && loginBrowserHelp(true));
+  button.hidden = browserHandoff;
+  if (browserHandoff && loginBrowserHelp(true).hidden) {
+    showLoginHelp(true, '카카오톡 같은 앱 안에서는 구글 로그인이 제한돼요. 아래 버튼으로 이 일정 링크를 복사하고 Safari나 Chrome 주소창에 붙여넣어 주세요.');
+  }
   if (account && !cloudReady && sharedSchedule) {
     $('#schedule-share-status').textContent = $('#sync-status').textContent;
   }
+}
+
+function isInAppLoginBrowser(userAgent = navigator.userAgent) {
+  return /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV/i.test(userAgent);
 }
 
 function loginBrowserHelp(shared) {
@@ -491,7 +500,7 @@ async function loginWithBrowserHelp(shared = false) {
   }
   const status = shared ? $('#schedule-share-status') : null;
   if (status) status.textContent = '';
-  if (/KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV/i.test(navigator.userAgent)) {
+  if (isInAppLoginBrowser()) {
     showLoginHelp(shared, '앱 안에서 구글 로그인 창이 열리지 않을 수 있어요. 링크를 복사해 Safari나 Chrome 주소창에 붙여넣고 다시 눌러 주세요.');
     return;
   }
