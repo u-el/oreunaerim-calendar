@@ -401,3 +401,17 @@ body.forest-interface[data-theme]{
 #hike-photo-preview{display:block;width:min(100%,320px);height:auto;border-radius:10px}
 #hike-photo-status:empty,#hike-notice-status:empty{display:none}
 #hike-notice-preview{display:grid;gap:8px}
+
+.forest-interface .activity-menu:has(#hike-feed-tab:not([hidden])){grid-template-columns:repeat(5,minmax(0,1fr))}
+.forest-interface .activity-menu #hike-feed-tab{border:0;border-radius:999px;background:transparent;color:var(--ink);padding-inline:2px;font-size:.9rem;white-space:nowrap}
+.forest-interface .activity-menu #hike-feed-tab[aria-pressed=true]{background:var(--pine);color:white}
+.hike-feed{margin:16px 0 24px}
+.hike-feed h1{font-size:clamp(1.45rem,5vw,2.2rem);letter-spacing:-.05em}
+.hike-feed-message{color:var(--dim);margin:10px 0}
+.hike-feed-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px}
+.hike-feed-card{display:grid;align-content:start;padding:0;overflow:hidden;text-align:left;border-radius:16px;background:var(--white);width:100%;max-width:450px}
+.hike-feed-card img{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--mint);display:block}
+.hike-feed-card-body{display:grid;gap:5px;padding:12px 15px;color:var(--dim);overflow-wrap:anywhere}
+.hike-feed-card-body strong{font-size:1.15rem;color:var(--ink)}
+.hike-feed-card-body .schedule-status{justify-self:start}
+@media(max-width:360px){.forest-interface .activity-menu:has(#hike-feed-tab:not([hidden])){gap:2px}.forest-interface .activity-menu #hike-feed-tab{font-size:.8rem;padding-inline:0}}
