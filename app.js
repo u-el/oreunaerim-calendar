@@ -139,6 +139,7 @@ function scheduleBacLinks(links, type, points) {
 const bacAlternateRegions = {
   'classic:백운산(동강)': ['동간'],
   'classic:운악산': ['경기 포천', '경기 가평'],
+  'classic:가야산(경상)': ['경북 성주'],
   'classic:금정산': ['부산', '부산 금정'],
   'classic:팔공산': ['대구', '대구 동구', '대구 군위'],
   'plus:수리산(경기 안양)': ['경기 군포']
@@ -1187,6 +1188,25 @@ function recordAltitude(record) {
     .map(place => ({name:place.label.replace(/^(\S+)\s+\1/u, '$1'), altitude:recordNumber(place.altitude)}))
     .sort((first, second) => second.altitude - first.altitude)[0] || null;
 }
+// 같은 이름의 다른 산(가야산 경남/충남 등)을 인증 목록·지역으로 구분
+const bacBaseCounts = bacCatalog.reduce((counts, place) => {
+  const base = bacKey(place.name.replace(/\s*\([^)]*\)/g, ''));
+  counts.set(base, (counts.get(base) || new Set()).add(place.name));
+  return counts;
+}, new Map());
+function peakIdentity(record, point) {
+  const name = String(point).normalize('NFC').trim();
+  const type = certificationTypeOf(record);
+  const region = record.region || '';
+  const linked = scheduleBacLinks(record.bacLinks, type, [point])[0]?.id;
+  const id = linked || [type, ...Object.keys(bacProgramLabels)].filter(kind => Object.hasOwn(bacProgramLabels, kind))
+    .map(kind => legacyBacMatch(kind, name, region)).find(Boolean);
+  const place = id && bacById.get(id);
+  const ambiguous = (bacBaseCounts.get(bacKey(name.replace(/\s*\([^)]*\)/g, '')))?.size || 0) > 1;
+  if (place) return {key:'bac:' + bacKey(place.name), name:ambiguous ? place.name : name};
+  const area = region.normalize('NFC').trim().split(/\s+/).slice(0, 2).join(' ');
+  return ambiguous && area ? {key:bacKey(name) + '@' + bacKey(area), name:`${name}(${area})`} : {key:bacKey(name), name};
+}
 const recordYearOf = record => (record.end || record.start || '').slice(0, 4);
 const groupNumber = (value, digits = 0) => value.toLocaleString('ko-KR', {maximumFractionDigits:digits});
 
@@ -1203,8 +1223,7 @@ function renderHikeRecords(loading) {
   for (const record of list) {
     const seen = new Set();
     for (const raw of record.certified?.length ? record.certified : certificationPoints(record)) {
-      const name = String(raw).normalize('NFC').trim();
-      const key = name.replace(/\s+/g, '');
+      const {key, name} = peakIdentity(record, raw);
       if (!key || seen.has(key)) continue;
       seen.add(key);
       const entry = peakCounts.get(key) || {name, count:0};
