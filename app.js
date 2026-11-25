@@ -2346,7 +2346,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     const urls = [location.origin + location.pathname, ...performance.getEntriesByType('resource').map(entry => entry.name)]
       .filter(url => url.startsWith(location.origin + '/') || url.startsWith('https://www.gstatic.com/firebasejs/'))
       .filter(url => !/\/sw\.js(\?|$)/.test(url));
-    const cache = await caches.open('oreunaerim-offline-v2');
+    const cache = await caches.open('oreunaerim-offline-v3');
     await Promise.all(urls.map(async url => {
       if (await cache.match(url)) return;
       const response = await fetch(url, {cache:'force-cache'}).catch(() => null);
