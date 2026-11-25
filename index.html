@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=hike-photos-search"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=hike-album-viewer"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -60,6 +60,21 @@
 .hike-photo-gallery figure { margin: 0; min-width: 0; display: grid; align-content: start; gap: 4px; }
 .hike-photo-gallery img { display: block; width: 100%; border-radius: 9px; }
 .hike-photo-gallery button { min-height: 44px; }
+.album-card { min-width: 0; margin-bottom: 8px; }
+.album-card > .card, .album-card > .hike-feed-card { width: 100%; margin: 0; }
+.album-cover { position: relative; display: block; width: 100%; padding: 0; overflow: hidden; border-radius: 14px; background: #e4eee3; }
+.album-cover img { display: block; width: 100%; height: clamp(112px, 34vw, 200px); object-fit: cover; }
+.album-cover span { position: absolute; right: 10px; bottom: 10px; padding: 5px 10px; border-radius: 20px; color: #fff; background: #163a2e; font-size: .84rem; }
+.album-preview { width: 100%; padding: 0; border: 0; background: transparent; }
+.hike-photo-gallery figcaption { display: flex; gap: 4px; flex-wrap: wrap; }
+.hike-photo-gallery figcaption button { font-size: .78rem; padding-inline: 6px; }
+#photo-album { width: min(94vw, 720px); max-height: 92dvh; padding: 14px; background: #172e26; color: white; box-sizing: border-box; }
+#photo-album::backdrop { background: rgb(0 0 0 / 68%); }
+#photo-album header, #photo-album .album-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: transparent; border: 0; }
+#photo-album-title { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+#photo-album-image { display: block; width: 100%; max-height: 68dvh; object-fit: contain; margin-block: 10px; touch-action: pan-y pinch-zoom; }
+#photo-album button { min-height: 44px; }
+#photo-album-count { margin-inline: auto; }
 </style>
 <!-- BAC public certification locations, checked 2026-11-25. Cheonseongsan details from the BAC September 12 bus listing. -->
 <script type="application/json" id="bac-catalog">{
@@ -577,5 +592,10 @@
 <div class="dialog-actions"><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
 </form></dialog>
 <div role="status" id="toast"></div>
+<dialog id="photo-album" aria-labelledby="photo-album-title">
+  <header><h2 id="photo-album-title">산행 사진</h2><button id="photo-album-close" type="button" autofocus>닫기</button></header>
+  <img id="photo-album-image" alt="산행 사진">
+  <div class="album-controls"><button id="photo-album-prev" type="button">이전</button><span id="photo-album-count" aria-live="polite"></span><button id="photo-album-next" type="button">다음</button></div>
+</dialog>
 </body>
 </html>
