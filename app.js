@@ -3,7 +3,7 @@
 const $ = selector => document.querySelector(selector);
 const names = value => value.split('·').map(part => part.trim()).filter(Boolean);
 const key = 'seom-mountain-log:v1';
-const goal = 100;
+const certificationGoals = {classic:100, plus:114, island:100};
 const categories = {
   personal: '개인 산행',
   'club-hike': '오르내림 산행',
@@ -392,6 +392,7 @@ function renderCertification() {
   if (!cards) return;
   cards.innerHTML = ['classic','plus','island'].map(type => {
     const count = countCertifiedPeaks(type);
+    const goal = certificationGoals[type];
     const percent = Math.min(100, Math.round(count / goal * 100));
     return `<div class="certification-count${count >= goal ? ' is-complete' : ''}">
       <span class="certification-label">${certificationTypes[type]}${count >= goal ? '<span class="completion-badge">완등</span>' : ''}</span>
