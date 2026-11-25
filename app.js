@@ -1447,6 +1447,21 @@ function scheduleDate(record, includeYear) {
   return format(record.start) + (record.end && record.end !== record.start ? ' ~ '+format(record.end) : '');
 }
 
+function scheduleDateParts(record, includeYear) {
+  if (!record.start) return '<span class="sd-main">날짜 미정</span>';
+  if (includeYear === 'auto') includeYear = [record.start, record.end].some(date => date && date.slice(0, 4) !== today.slice(0, 4));
+  const part = date => {
+    const [year, month, day] = date.split('-').map(Number);
+    return {year, main:`${month}. ${day}.`, week:'일월화수목금토'[new Date(Date.UTC(year, month - 1, day)).getUTCDay()]};
+  };
+  const start = part(record.start);
+  const end = record.end && record.end !== record.start ? part(record.end) : null;
+  const years = end && end.year !== start.year ? `${start.year}~${end.year}년` : `${start.year}년`;
+  return (includeYear ? `<span class="sd-year">${years}</span>` : '') +
+    `<span class="sd-main"><span>${start.main}</span>${end ? `<span>~ ${end.main}</span>` : ''}</span>` +
+    `<span class="sd-week">${start.week}${end ? ' ~ ' + end.week : ''}</span>`;
+}
+
 function scheduleCard(record, displayView) {
   const category = categoryOf(record);
   const kind = calendarKind(record);
@@ -1463,9 +1478,9 @@ function scheduleCard(record, displayView) {
   const summary = isHike(category) && record.status === 'done' ? actualHikeSummary(record) : '';
   const stamped = status === 'certified';
   const card = `<button class="schedule-card card kind-${kind}${stamped ? ' is-stamped' : ''}" type="button" data-record="${escape(record.id)}">
-    <span class="schedule-date">${escape(scheduleDate(record, displayView === 'month' ? false : displayView === 'planned' ? 'auto' : true))}</span>
+    <span class="schedule-date" aria-label="${escape(scheduleDate(record, displayView === 'month' ? false : displayView === 'planned' || displayView === 'calendar' ? 'auto' : true))}">${scheduleDateParts(record, displayView === 'month' ? false : displayView === 'planned' || displayView === 'calendar' ? 'auto' : true)}</span>
     <span class="schedule-card-body">
-      <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong>${stamped ? '' : `<span class="schedule-status status-${status}">${statusLabel}</span>`}</span>
+      <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong>${stamped || status === displayView ? '' : `<span class="schedule-status status-${status}">${statusLabel}</span>`}</span>
       <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
       ${summary ? '<span class="hike-card-metrics">'+escape(summary)+'</span>' :
         isHike(category) && record.status !== 'done' && hikingMetrics(record) ? '<span class="meta">'+escape(hikingMetrics(record))+'</span>' : ''}
@@ -1516,7 +1531,7 @@ function renderCalendar() {
     const fills = kinds.length ? `<span class="day-fills" aria-hidden="true">${kinds.map(kind => `<i class="${kind}"></i>`).join('')}</span>` : '';
     const label = [index+1+'월 '+day+'일', date === today ? '오늘' : '', count ? '일정 '+count+'건 · '+kindLabels : ''].filter(Boolean).join(', ');
     const weekday = (leading + day - 1) % 7;
-    html += `<button type="button" class="day ${count ? 'has-event' : ''} ${date === today ? 'today' : ''} ${weekday === 0 ? 'is-sun' : weekday === 6 ? 'is-sat' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${label}">${fills}<span class="day-number">${day}</span></button>`;
+    html += `<button type="button" class="day ${count ? 'has-event' : ''} ${date === today ? 'today' : ''} ${weekday === 0 ? 'is-sun' : weekday === 6 ? 'is-sat' : ''} ${count && date < today ? 'is-past' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${label}">${fills}<span class="day-number">${day}</span></button>`;
   }
   $('#calendar').innerHTML = html;
   const events = calendarRecords.filter(record => selectedDay ? includes(record,selectedDay) :
@@ -1524,7 +1539,9 @@ function renderCalendar() {
   events.sort((a,b) => a.start.localeCompare(b.start));
   $('#events').innerHTML = `<div class="events-head"><h3>${selectedDay ? fmt(selectedDay) + ' 일정' : '이달의 일정'}</h3>${selectedDay ?
     `<button type="button" data-add-on-day="${selectedDay}">＋ 이 날 일정 만들기</button>` : '<span class="hint">날짜를 길게 누르면 바로 만들 수 있어요</span>'}</div>` +
+    (events.length && !selectedDay ? `<p class="hint month-fold-hint">이번 달 일정 ${events.length}건 · 날짜를 누르면 그날 일정이 보여요</p>` : '') +
     (events.map(record => scheduleCard(record, selectedDay ? 'calendar' : 'month')).join('') || '<span class="hint">등록된 일정이 없어요.</span>');
+  $('#events').classList.toggle('is-month', !selectedDay);
 }
 
 function openEditor(record = {...blank(),start:selectedDay,category:$('#category-filter').value || menus[menu].categories[0]}) {
