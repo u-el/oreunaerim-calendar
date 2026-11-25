@@ -99,3 +99,15 @@ export function observeGearSets(uid, onSets, onError) {
 export function saveGearSets(uid, sets) {
   return setDoc(gearSetsDoc(uid), {sets, updatedAt: Date.now()});
 }
+
+function profileDoc(uid) {
+  return doc(db, 'accounts', uid, 'settings', 'profile');
+}
+
+export function observeProfile(uid, onProfile, onError) {
+  return onSnapshot(profileDoc(uid), snapshot => onProfile(snapshot.data() || {}), onError);
+}
+
+export function saveProfile(uid, nickname) {
+  return setDoc(profileDoc(uid), {nickname, updatedAt: Date.now()});
+}

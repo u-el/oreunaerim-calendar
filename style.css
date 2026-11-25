@@ -720,3 +720,13 @@ html[data-color=dark] body.forest-interface:is([data-theme="food"],[data-theme="
   .forest-interface .certification-count strong{font-size:1.75rem}
   .forest-interface .certification-count .summit-left{font-size:.8rem}
 }
+
+/* 닉네임 */
+.nickname-dialog{width:min(400px,calc(100% - 32px))}
+.nickname-dialog form{display:grid;gap:10px;padding:22px}
+.nickname-dialog h2{margin:0;font-size:1.25rem;color:var(--pine)}
+.nickname-dialog .hint{margin:0}
+.nickname-dialog label{display:grid;gap:6px;font-weight:600}
+.nickname-dialog #nickname-status:empty{display:none}
+.nickname-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+html[data-color=dark] .nickname-dialog{background:var(--white)}

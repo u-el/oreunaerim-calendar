@@ -12,6 +12,14 @@ service cloud.firestore {
         && request.resource.data.gear is list
         && request.resource.data.certified is list;
     }
+    match /accounts/{uid}/settings/profile {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nickname', 'updatedAt'])
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() >= 1
+        && request.resource.data.nickname.size() <= 20;
+    }
     match /accounts/{uid}/settings/gearSets {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid

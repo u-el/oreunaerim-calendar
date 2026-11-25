@@ -1558,6 +1558,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   for (const name of allFields) {
     if (field(name)) field(name).value = record[name] ?? '';
   }
+  if (!record.id && !record.host && nickname && categoryOf(record) !== 'personal') field('host').value = nickname;
   if ($('#hike-photo')) {
     photoRequest++;
     photoLoading = false;
@@ -1971,6 +1972,7 @@ if (certificationShortcut) certificationShortcut.onclick = () => {
 };
 field('category').onchange = () => {
   field('name').setCustomValidity('');
+  if (!editing?.id && nickname && !field('host').value && field('category').value !== 'personal') field('host').value = nickname;
   layoutScheduleSections();
   renderCategory();
 };
@@ -2189,6 +2191,82 @@ function addGearPreset(name) {
 const gearSetKey = 'oreunaerim:gear-sets:v1';
 const gearSetLimit = 20;
 const gearSetItemLimit = 60;
+/* ---- 닉네임 ---- */
+let nickname = '';
+let stopProfile;
+const nicknameKey = uid => 'oreunaerim:nickname:' + uid;
+const nicknameSkipKey = uid => 'oreunaerim:nickname-skip:' + uid;
+const cleanNickname = value => String(value || '').normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 20);
+
+function renderNickname() {
+  const edit = $('#nickname-edit');
+  if (edit) {
+    edit.hidden = !account;
+    edit.textContent = nickname ? `${nickname}님 · 닉네임 바꾸기` : '닉네임 설정';
+  }
+  const heading = $('#hike-feed-heading');
+  if (heading) heading.textContent = account && nickname ? `${nickname}님의 산행 기록` : '내 산행 기록';
+}
+
+function openNicknameDialog() {
+  const box = $('#nickname-dialog');
+  if (!box || !account || box.open) return;
+  $('#nickname-input').value = nickname;
+  $('#nickname-status').textContent = '';
+  $('#nickname-skip').textContent = nickname ? '취소' : '나중에';
+  box.showModal();
+}
+
+function watchProfile(user) {
+  stopProfile?.();
+  stopProfile = null;
+  nickname = '';
+  if (user) try { nickname = cleanNickname(localStorage.getItem(nicknameKey(user.uid))); } catch {}
+  renderNickname();
+  if (!user || !sync?.observeProfile) return;
+  stopProfile = sync.observeProfile(user.uid, profile => {
+    if (account?.uid !== user.uid) return;
+    const cloud = cleanNickname(profile.nickname);
+    if (cloud) {
+      nickname = cloud;
+      try { localStorage.setItem(nicknameKey(user.uid), cloud); } catch {}
+    }
+    renderNickname();
+    askNicknameOnce(user);
+  }, () => askNicknameOnce(user));
+}
+
+function askNicknameOnce(user) {
+  if (account?.uid !== user.uid || nickname || dialog.open) return;
+  let skipped = false;
+  try { skipped = localStorage.getItem(nicknameSkipKey(user.uid)) === '1'; } catch {}
+  if (!skipped) openNicknameDialog();
+}
+
+$('#nickname-edit')?.addEventListener('click', openNicknameDialog);
+$('#nickname-skip')?.addEventListener('click', () => {
+  if (account && !nickname) try { localStorage.setItem(nicknameSkipKey(account.uid), '1'); } catch {}
+  $('#nickname-dialog').close();
+});
+$('#nickname-form')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const value = cleanNickname($('#nickname-input').value);
+  const status = $('#nickname-status');
+  if (!account) return;
+  if (!value) { status.textContent = '닉네임을 한 글자 이상 적어 주세요.'; return; }
+  const uid = account.uid;
+  nickname = value;
+  try { localStorage.setItem(nicknameKey(uid), value); } catch {}
+  renderNickname();
+  $('#nickname-dialog').close();
+  try {
+    await sync.saveProfile(uid, value);
+    feedback(`${value}님, 반가워요!`);
+  } catch {
+    feedback('닉네임을 이 기기에만 저장했어요. 다른 기기에는 나중에 반영돼요.');
+  }
+});
+
 let gearSets = [];
 let stopGearSets;
 let cloudGearSets = false;
@@ -2575,6 +2653,7 @@ function changeAccount(user) {
   stopSchedules?.();
   account = user;
   watchGearSets(user);
+  watchProfile(user);
   renderGearSets();
   if (user) {
     for (const help of document.querySelectorAll('[data-login-help]')) help.hidden = true;
@@ -2630,7 +2709,7 @@ async function runAccountAction(action, errorMessage) {
   finally { setSyncBusy(false); }
 }
 
-if ($('#sync-status')) import('./sync.mjs?v=gear-sets').then(module => {
+if ($('#sync-status')) import('./sync.mjs?v=nickname').then(module => {
   sync = module;
   updateScheduleShare();
   renderAccountBanner();

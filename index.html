@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=design-polish-3"><script defer src="app.js?v=design-polish-3"></script>
+<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=nickname"><script defer src="app.js?v=nickname"></script>
 <script>try{var c=localStorage.getItem('oreunaerim:color-scheme');document.documentElement.dataset.color=(c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="오르내림">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=night">
@@ -528,6 +528,7 @@
   <button id="google-login" type="button" hidden>Google로 로그인</button>
   <div class="login-browser-help" id="calendar-login-help" data-login-help hidden><p role="status"></p><button type="button">브라우저에서 열 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
   <button id="import-local" type="button" hidden>이 브라우저의 일정 가져오기</button>
+  <button id="nickname-edit" type="button" hidden>닉네임 설정</button>
   <button id="google-logout" type="button" hidden>로그아웃</button>
 </div><button id="export-backup" type="button">백업 내보내기</button></footer>
 </main>
@@ -679,6 +680,15 @@
   <button type="button" class="primary" id="schedule-share-copy" hidden>공유 링크 복사</button>
   <button type="button" class="primary" id="schedule-share-save" hidden>내 캘린더에 담기</button>
   <label id="schedule-share-url-row" hidden>공유 링크<input type="url" id="schedule-share-url" readonly></label>
+</dialog>
+<dialog id="nickname-dialog" class="nickname-dialog" aria-labelledby="nickname-title">
+  <form method="dialog" id="nickname-form">
+    <h2 id="nickname-title">뭐라고 불러드릴까요?</h2>
+    <p class="hint">새 벙을 만들면 벙주 칸에 자동으로 들어가요. 언제든 바꿀 수 있어요.</p>
+    <label>닉네임<input id="nickname-input" name="nickname" maxlength="20" autocomplete="nickname" placeholder="예) 산다람쥐" required></label>
+    <p id="nickname-status" class="hint" role="status"></p>
+    <div class="nickname-actions"><button type="button" id="nickname-skip">나중에</button><button type="submit" class="primary">저장</button></div>
+  </form>
 </dialog>
 </body>
 </html>
