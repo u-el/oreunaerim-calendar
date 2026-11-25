@@ -702,3 +702,21 @@ html[data-color=dark] select:not(.filters select){background:#1a2a22 url("data:i
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;min-height:2.5rem;line-height:1.4;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0;min-height:1.4em}
 input[type=date]::-webkit-calendar-picker-indicator{margin:0}
+
+/* 디자인 다듬기 3: 탭별 색 통일, 산행 탭 순서, 필터 한 줄, 인증 카드 */
+body.forest-interface:is([data-theme="food"],[data-theme="play"]){--mint:#e1ebdb;--soft:#e8eee0;--accent:#193e30;--accent-hover:#244f3d}
+body.forest-interface:is([data-theme="food"],[data-theme="play"]) :is(.primary,.logo,.day[aria-pressed=true]){background:var(--pine);border-color:var(--pine);color:#fff}
+body.forest-interface:is([data-theme="food"],[data-theme="play"]) :is(.primary,.day[aria-pressed=true]):hover{background:#244f3d}
+html[data-color=dark] body.forest-interface:is([data-theme="food"],[data-theme="play"]){--mint:#1f3a2d;--soft:#24372d;--accent:#3f6b55;--accent-hover:#4b7c63}
+html[data-color=dark] body.forest-interface:is([data-theme="food"],[data-theme="play"]) :is(.primary,.day[aria-pressed=true]){background:#3f7a5b;border-color:#3f7a5b;color:#fff}
+.forest-interface .hike-search{margin:0 0 20px}
+.cert-name-short{display:none}
+@media(max-width:560px){
+  .filters{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:100%;padding-bottom:2px}
+  .filters::-webkit-scrollbar{display:none}
+  .filters select{flex:none}
+  .cert-name-full{display:none}
+  .cert-name-short{display:inline}
+  .forest-interface .certification-count strong{font-size:1.75rem}
+  .forest-interface .certification-count .summit-left{font-size:.8rem}
+}

@@ -710,7 +710,7 @@ function renderCertification() {
     const goal = certificationGoals[type];
     const percent = Math.min(100, Math.round(count / goal * 100));
     return `<button type="button" class="certification-count${count >= goal ? ' is-complete' : ''}" data-certification-list="${type}" aria-controls="bac-progress" aria-label="${certificationTypes[type]} ${count} / ${goal}좌, 완료 목록 열기">
-      <span class="certification-label">${certificationTypes[type]}${count >= goal ? '<span class="completion-badge">완등</span>' : ''}</span>
+      <span class="certification-label"><span class="cert-name-full">${certificationTypes[type]}</span><span class="cert-name-short" aria-hidden="true">${{classic:'100대 명산',plus:'100+ 명산',island:'섬앤산'}[type]}</span>${count >= goal ? '<span class="completion-badge">완등</span>' : ''}</span>
       <strong>${count}<small> / ${goal}좌</small></strong>
       ${summitMeter(percent, type)}
       <span class="summit-left">${count >= goal ? '모든 인증지 완등!' : '정상까지 '+(goal - count)+'좌'}</span></button>`;
