@@ -770,3 +770,31 @@ footer .sync-panel{display:contents}
 .footer-break{flex-basis:100%;height:0}
 footer #export-backup{margin-left:0}
 .app-version{flex-basis:100%;font-size:.72rem;color:var(--dim);opacity:.7}
+
+/* 공유 창 */
+#schedule-share-dialog{width:min(440px,calc(100% - 24px));padding:20px;display:grid;gap:12px}
+#schedule-share-dialog:not([open]){display:none}
+.share-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.share-head h2{margin:0;font-size:1.2rem;color:var(--pine)}
+#schedule-share-close{flex:none;width:38px;height:38px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--white);font-size:1.2rem;line-height:1}
+#schedule-share-note{margin:0;font-size:.85rem;line-height:1.5}
+.share-card{display:grid;gap:4px;padding:16px;border:1px solid var(--line);border-left:4px solid var(--schedule-color,var(--jade));border-radius:14px;background:var(--page)}
+.share-card.kind-hike{--schedule-color:#a8ddae}.share-card.kind-backpacking{--schedule-color:#d8b6f2}.share-card.kind-food{--schedule-color:#ffdc68}.share-card.kind-play{--schedule-color:#a3d9ff}
+.share-from{justify-self:start;margin-bottom:4px;padding:2px 10px;border-radius:99px;background:#f3dfaa;color:#3d2f0c;font-size:.75rem;font-weight:800}
+.share-title{font-size:1.3rem;line-height:1.25;color:var(--ink);overflow-wrap:anywhere}
+.share-date{font-weight:700;color:var(--jade)}
+.share-tags{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--dim)}
+.share-card dl{display:grid;gap:6px;margin:10px 0 0;padding-top:10px;border-top:1px dashed var(--line)}
+.share-card dl div{display:grid;grid-template-columns:5.5rem minmax(0,1fr);gap:8px;font-size:.88rem}
+.share-card dt{color:var(--dim)}
+.share-card dd{margin:0;color:var(--ink);overflow-wrap:anywhere;white-space:pre-line}
+.share-gear{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.share-gear span{padding:3px 9px;border:1px solid var(--line);border-radius:99px;background:var(--white);font-size:.78rem;font-weight:600}
+#schedule-share-status:empty{display:none}
+#schedule-share-dialog>.primary{width:100%;min-height:46px}
+html[data-color=dark] .share-card{background:#13211a}
+html[data-color=dark] .share-from{background:#3a3220;color:#f3dfaa}
+html[data-color=dark] #schedule-share-close{background:#1a2a22}
+/* 접힌 칸 화살표는 항상 오른쪽 끝 */
+.editor-section>summary::after{margin-left:auto}
+.editor-section>summary:has(.section-meta:not(:empty))::after{margin-left:8px}

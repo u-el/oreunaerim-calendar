@@ -463,6 +463,24 @@ function decodeScheduleShare(hash) {
   }
 }
 
+// 공유 창: 받는 사람이 보게 될 일정 카드
+function shareCard(record, from) {
+  const headline = ['name', 'category', 'start', 'end', 'type', 'certificationType'];
+  const kind = calendarKind(record);
+  const certification = isHike(categoryOf(record)) && record.certificationType && record.certificationType !== 'undecided' && certificationTypes[record.certificationType];
+  const tags = [categories[categoryOf(record)], record.type, certification].filter(Boolean).join(' · ');
+  const rows = Object.entries(sharedFields).filter(([key]) => record[key] && !headline.includes(key))
+    .map(([key, label]) => `<div><dt>${escape(label)}</dt><dd>${escape(record[key])}</dd></div>`).join('');
+  const gear = record.gear?.length ? `<div class="share-gear">${record.gear.map(item => `<span>${escape(item.label)}</span>`).join('')}</div>` : '';
+  return `<article class="share-card kind-${kind}">
+    ${from ? `<span class="share-from">${escape(from)}님이 보낸 일정</span>` : ''}
+    <strong class="share-title">${escape(record.name)}</strong>
+    <span class="share-date">${escape(scheduleDate(record, 'auto'))}</span>
+    ${tags ? `<span class="share-tags">${calendarDot(kind)}${escape(tags)}</span>` : ''}
+    ${rows ? `<dl>${rows}</dl>` : ''}${gear}
+  </article>`;
+}
+
 function showScheduleShare(mode, record) {
   const share = $('#schedule-share-dialog');
   shareMode = mode;
@@ -480,12 +498,7 @@ function showScheduleShare(mode, record) {
   if (help) help.hidden = true;
   $('#schedule-share-url').value = '';
   $('#schedule-share-status').textContent = record ? '' : '공유 링크를 읽을 수 없어요.';
-  const values = record ? Object.entries(sharedFields).filter(([key]) => record[key]).map(([key,label]) => {
-    const value = key === 'category' ? categories[record[key]] : key === 'certificationType' ? certificationTypes[record[key]] : record[key];
-    return [label,value];
-  }) : [];
-  if (record?.gear.length) values.push(['준비물', record.gear.map(item => item.label).join(' · ')]);
-  $('#schedule-share-data').innerHTML = values.map(([label,value]) => '<div><dt>'+escape(label)+'</dt><dd>'+escape(value)+'</dd></div>').join('');
+  $('#schedule-share-data').innerHTML = record ? shareCard(record, mode === 'send' ? from : '') : '';
   updateScheduleShare();
   if (!share.open) share.showModal();
 }

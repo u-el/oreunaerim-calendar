@@ -2,8 +2,13 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=share-from-2"><script defer src="app.js?v=share-from-2"></script>
+<meta name="theme-color" content="#143d35"><meta name="description" content="산행·백패킹·먹벙·놀이벙 모임 일정과 명산 인증을 한곳에서 챙기는 캘린더">
+<meta property="og:type" content="website"><meta property="og:site_name" content="오르내림 캘린더"><meta property="og:locale" content="ko_KR">
+<meta property="og:title" content="오르내림 캘린더"><meta property="og:description" content="산행·백패킹·먹벙·놀이벙 모임 일정과 명산 인증을 한곳에서 챙겨요">
+<meta property="og:url" content="https://u-el.github.io/oreunaerim-calendar/"><meta property="og:image" content="https://u-el.github.io/oreunaerim-calendar/og-image.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="오르내림 캘린더 - 배낭을 멘 레서판다">
+<meta name="twitter:card" content="summary_large_image">
+<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=share-card"><script defer src="app.js?v=share-card"></script>
 <script>try{var c=localStorage.getItem('oreunaerim:color-scheme');document.documentElement.dataset.color=(c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="오르내림">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=night">
@@ -672,9 +677,9 @@
   <div class="album-controls"><button id="photo-album-prev" type="button">이전</button><span id="photo-album-count" aria-live="polite"></span><button id="photo-album-next" type="button">다음</button></div>
 </dialog>
 <dialog id="schedule-share-dialog" aria-labelledby="schedule-share-title">
-  <header><h2 id="schedule-share-title">공유 일정</h2><button type="button" id="schedule-share-close" autofocus>닫기</button></header>
+  <header class="share-head"><h2 id="schedule-share-title">공유 일정</h2><button type="button" id="schedule-share-close" aria-label="닫기">×</button></header>
   <p class="hint" id="schedule-share-note"></p>
-  <dl id="schedule-share-data"></dl>
+  <div id="schedule-share-data"></div>
   <p id="schedule-share-status" role="status"></p>
   <div class="login-browser-help" id="share-login-help" data-login-help hidden><p role="status"></p><button type="button" class="primary">공유 일정 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
   <button type="button" class="primary" id="schedule-share-copy" hidden>공유 링크 복사</button>
