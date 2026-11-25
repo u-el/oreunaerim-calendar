@@ -659,3 +659,15 @@ html[data-color=dark] :is(.day-label.is-sat,.day.is-sat:not([aria-pressed=true])
 html[data-color=dark] .day.has-event:is(.is-sun,.is-sat) .day-number{color:inherit}
 html[data-color=dark] .filters select{background:#1a2a22 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%239fb2a7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right .8rem center;border-color:#34483e}
 html[data-color=dark] .forest-interface .tabs button[aria-pressed=true]{background:transparent}
+/* 다녀온 산 목록 */
+.record-peaks-toggle{justify-self:start;padding:0;border:0;background:none;color:var(--jade);font-size:.8rem;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.record-peaks-toggle::after{content:" ▾";display:inline-block;text-decoration:none;margin-left:2px}
+.record-peaks-toggle[aria-expanded=true]::after{content:" ▴"}
+.record-peaks{margin-top:10px}
+.record-peaks ul{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.record-peaks li{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;font-size:.85rem;font-weight:600;color:var(--ink)}
+.record-peaks li.is-repeat{border-color:var(--jade);background:color-mix(in srgb,var(--jade) 12%,var(--white))}
+.record-peaks li b{font-size:.75rem;color:var(--jade)}
+html[data-color=dark] .record-peaks-toggle{background:none;color:#8fd0ab}
+html[data-color=dark] .record-peaks li.is-repeat{background:#22392d;border-color:#3f7a5b}
+html[data-color=dark] .record-peaks li b{color:#8fd0ab}

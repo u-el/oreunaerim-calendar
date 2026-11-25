@@ -1160,6 +1160,7 @@ function renderHikeFeed() {
 const everestHeight = 8849;
 let recordYear = today.slice(0, 4);
 let stampsExpanded = false;
+let peaksOpen = false;
 const stampsObserver = 'ResizeObserver' in window ? new ResizeObserver(() => layoutStamps()) : null;
 if (!stampsObserver) addEventListener('resize', layoutStamps);
 const recordNumber = value => {
@@ -1198,8 +1199,20 @@ function renderHikeRecords(loading) {
   const years = [...new Set(hikes.map(recordYearOf).filter(Boolean))].sort().reverse();
   if (recordYear !== 'all' && !years.includes(recordYear)) recordYear = years[0] || 'all';
   const list = recordYear === 'all' ? hikes : hikes.filter(record => recordYearOf(record) === recordYear);
-  const peaks = new Set(list.flatMap(record => (record.certified?.length ? record.certified : certificationPoints(record))
-    .map(name => name.normalize('NFC').replace(/\s+/g, ''))).filter(Boolean));
+  const peakCounts = new Map();
+  for (const record of list) {
+    const seen = new Set();
+    for (const raw of record.certified?.length ? record.certified : certificationPoints(record)) {
+      const name = String(raw).normalize('NFC').trim();
+      const key = name.replace(/\s+/g, '');
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      const entry = peakCounts.get(key) || {name, count:0};
+      entry.count++;
+      peakCounts.set(key, entry);
+    }
+  }
+  const peakList = [...peakCounts.values()].sort((first, second) => second.count - first.count || first.name.localeCompare(second.name, 'ko'));
   const distance = list.reduce((sum, record) => sum + recordNumber(actualHikeMetrics(record).distance), 0);
   const ascent = list.reduce((sum, record) => sum + recordNumber(actualHikeMetrics(record).ascent), 0);
   const minutes = list.reduce((sum, record) => sum + recordMinutes(record), 0);
@@ -1217,7 +1230,8 @@ function renderHikeRecords(loading) {
   const thisMonth = recordYear === today.slice(0, 4) ? +today.slice(5, 7) : 0;
 
   const stat = (label, value, unit, note = '') => `<div class="record-stat"><span>${label}</span>
-    <strong>${value}<small>${unit}</small></strong>${note ? `<em>${note}</em>` : ''}</div>`;
+    <strong>${value}<small>${unit}</small></strong>${note ? note.startsWith('<') ? note : `<em>${note}</em>` : ''}</div>`;
+  const peaksNote = peakCounts.size ? `<button type="button" class="record-peaks-toggle" aria-expanded="${peaksOpen}" aria-controls="record-peaks">다녀온 산 ${groupNumber(peakCounts.size)}곳</button>` : '';
   const hours = Math.floor(minutes / 60);
   const everest = ascent / everestHeight;
 
@@ -1225,11 +1239,15 @@ function renderHikeRecords(loading) {
       [...years.map(year => [year, year + '년']), ['all', '전체']].map(([value, label]) =>
         `<button type="button" data-record-year="${value}" aria-pressed="${value === recordYear}">${label}</button>`).join('')}</div>
     <div class="record-stats">
-      ${stat('산행', groupNumber(list.length), '회', peaks.size ? `다녀온 산 ${groupNumber(peaks.size)}곳` : '')}
+      ${stat('산행', groupNumber(list.length), '회', peaksNote)}
       ${stat('걸은 거리', distance ? groupNumber(distance, 1) : '—', distance ? 'km' : '', distance >= 42.195 ? `마라톤 ${groupNumber(distance / 42.195, 1)}번` : '')}
       ${stat('오른 높이', ascent ? groupNumber(ascent) : '—', ascent ? 'm' : '', ascent ? `에베레스트 ${groupNumber(everest, everest < 1 ? 2 : 1)}번` : '')}
       ${stat('산에서 보낸 시간', minutes ? groupNumber(hours) : '—', minutes ? '시간' : '', minutes % 60 ? `${minutes % 60}분 더` : '')}
     </div>
+    ${peakList.length ? `<section id="record-peaks" class="record-panel record-peaks" aria-label="${scopeLabel} 다녀온 산"${peaksOpen ? '' : ' hidden'}>
+      <h3>다녀온 산 <small>${groupNumber(peakList.length)}곳</small></h3>
+      <ul>${peakList.map(({name, count}) => `<li class="${count > 1 ? 'is-repeat' : ''}">${escape(name)}${count > 1 ? `<b>${count}번</b>` : ''}</li>`).join('')}</ul>
+    </section>` : ''}
     ${!distance && !ascent && !minutes ? '<p class="hint record-hint">완료한 산행에 실제 거리·시간·상승고도를 적거나 GPX를 넣으면 여기에 쌓여요.</p>' : ''}
     <div class="record-panels">
       <section class="record-panel" aria-label="${scopeLabel} ${recordYear === 'all' ? '연도별' : '월별'} 산행 횟수">
@@ -1276,6 +1294,13 @@ function layoutStamps() {
   toggle.setAttribute('aria-expanded', String(stampsExpanded));
 }
 $('#hike-records')?.addEventListener('click', event => {
+  const peaksToggle = event.target.closest('.record-peaks-toggle');
+  if (peaksToggle) {
+    peaksOpen = !peaksOpen;
+    peaksToggle.setAttribute('aria-expanded', String(peaksOpen));
+    $('#record-peaks').hidden = !peaksOpen;
+    return;
+  }
   const toggle = event.target.closest('.record-stamps-toggle');
   if (toggle) {
     stampsExpanded = !stampsExpanded;
