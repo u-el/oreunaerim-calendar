@@ -401,8 +401,8 @@ function renderBacProgress() {
   message.textContent = matching.length ? bacListLabels[filter]+' '+matching.length+'곳' : '조건에 맞는 인증지가 없어요.';
   list.innerHTML = matching.slice(0, bacListLimit).map(({place, record}) => {
     const details = [place.summit, place.altitude, place.region, record?.start && scheduleDate(record, true)].filter(Boolean).join(' · ');
-    const button = record ? '<button type="button" data-record="'+escape(record.id)+'" aria-label="'+escape(place.name)+' 일정 보기">일정 보기</button>' :
-      '<button type="button" data-bac-plan="'+escape(place.id)+'" aria-label="'+escape(place.name)+' 일정 만들기">일정 만들기</button>';
+    const button = record ? '<button type="button" class="bac-plan" data-record="'+escape(record.id)+'" aria-label="'+escape(place.name)+' 일정 보기">일정 보기</button>' :
+      '<button type="button" class="bac-plan" data-bac-plan="'+escape(place.id)+'" aria-label="'+escape(place.name)+' 일정 만들기">＋ 일정</button>';
     return '<li><div><strong>'+escape(place.name)+'</strong><small>'+escape(details)+'</small></div>'+button+'</li>';
   }).join('');
   more.hidden = matching.length <= bacListLimit;
@@ -1257,22 +1257,22 @@ function renderHikeRecords(loading) {
   box.innerHTML = `<div class="record-years" role="group" aria-label="기록 기간">${
       [...years.map(year => [year, year + '년']), ['all', '전체']].map(([value, label]) =>
         `<button type="button" data-record-year="${value}" aria-pressed="${value === recordYear}">${label}</button>`).join('')}</div>
-    <div class="record-stats">
+    <div class="record-stats${!distance && !ascent && !minutes ? ' is-compact' : ''}">
       ${stat('산행', groupNumber(list.length), '회', peaksNote)}
+      ${!distance && !ascent && !minutes ? '<p class="hint record-hint">완료한 산행에 실제 거리·시간·상승고도를 적거나 GPX를 넣으면 걸은 거리, 오른 높이, 산에서 보낸 시간이 여기에 쌓여요.</p>' : `
       ${stat('걸은 거리', distance ? groupNumber(distance, 1) : '—', distance ? 'km' : '', distance >= 42.195 ? `마라톤 ${groupNumber(distance / 42.195, 1)}번` : '')}
       ${stat('오른 높이', ascent ? groupNumber(ascent) : '—', ascent ? 'm' : '', ascent ? `에베레스트 ${groupNumber(everest, everest < 1 ? 2 : 1)}번` : '')}
-      ${stat('산에서 보낸 시간', minutes ? groupNumber(hours) : '—', minutes ? '시간' : '', minutes % 60 ? `${minutes % 60}분 더` : '')}
+      ${stat('산에서 보낸 시간', minutes ? groupNumber(hours) : '—', minutes ? '시간' : '', minutes % 60 ? `${minutes % 60}분 더` : '')}`}
     </div>
     ${peakList.length ? `<section id="record-peaks" class="record-panel record-peaks" aria-label="${scopeLabel} 다녀온 산"${peaksOpen ? '' : ' hidden'}>
       <h3>다녀온 산 <small>${groupNumber(peakList.length)}곳</small></h3>
       <ul>${peakList.map(({name, count}) => `<li class="${count > 1 ? 'is-repeat' : ''}">${escape(name)}${count > 1 ? `<b>${count}번</b>` : ''}</li>`).join('')}</ul>
     </section>` : ''}
-    ${!distance && !ascent && !minutes ? '<p class="hint record-hint">완료한 산행에 실제 거리·시간·상승고도를 적거나 GPX를 넣으면 여기에 쌓여요.</p>' : ''}
     <div class="record-panels">
       <section class="record-panel" aria-label="${scopeLabel} ${recordYear === 'all' ? '연도별' : '월별'} 산행 횟수">
         <h3>${recordYear === 'all' ? '연도별' : '월별'} 산행</h3>
         <ol class="record-bars">${buckets.map(([label, count], index) =>
-          `<li class="${recordYear !== 'all' && index + 1 === thisMonth ? 'is-now' : ''}" title="${label} ${count}회">
+          `<li class="${recordYear !== 'all' && index + 1 === thisMonth ? 'is-now' : ''}${count ? '' : ' is-empty'}" title="${label} ${count}회">
             <span class="record-bar" style="--h:${count / peak}"><b>${count || ''}</b></span><span class="record-bar-label">${label}</span></li>`).join('')}</ol>
       </section>
       <section class="record-panel record-highest">
@@ -1607,6 +1607,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   renderCategory();
   renderGear();
   dialog.showModal();
+  renderSectionMeta();
   if ($("#editor-sections")) $(".editor-content").scrollTop = 0;
 }
 
@@ -1665,6 +1666,7 @@ function renderHikePhoto(message = '') {
   gallery.innerHTML = hikePhotos.map((photo, index) =>
     `<figure><button type="button" class="album-preview" data-preview-photo="${index}" aria-label="사진 ${index+1} 크게 보기"><img src="${escape(photo)}" alt="" loading="lazy" decoding="async"></button><figcaption><button type="button" data-cover-photo="${index}" ${index === 0 || photoLoading ? 'disabled' : ''}>${index === 0 ? '대표 사진' : '대표로 설정'}</button><button type="button" data-remove-photo="${index}" aria-label="사진 ${index+1} 제거" ${photoLoading ? 'disabled' : ''}>제거</button></figcaption></figure>`).join('');
   gallery.hidden = !hikePhotos.length;
+  renderSectionMeta();
   $('#hike-photo-count').textContent = `${hikePhotos.length} / ${hikePhotoLimit}장`;
   $('#hike-photo').disabled = !isHike(field('category').value) || photoLoading || hikePhotos.length >= hikePhotoLimit;
   $('#hike-photo-status').textContent = message;
@@ -2202,7 +2204,8 @@ function renderNickname() {
   const edit = $('#nickname-edit');
   if (edit) {
     edit.hidden = !account;
-    edit.textContent = nickname ? `${nickname}님 · 닉네임 바꾸기` : '닉네임 설정';
+    edit.textContent = nickname ? `${nickname}님` : '닉네임 설정';
+    edit.setAttribute('aria-label', nickname ? `${nickname}님, 닉네임 바꾸기` : '닉네임 설정');
   }
   const heading = $('#hike-feed-heading');
   if (heading) heading.textContent = account && nickname ? `${nickname}님의 산행 기록` : '내 산행 기록';
@@ -2727,3 +2730,41 @@ if ($('#sync-status')) import('./sync.mjs?v=nickname').then(module => {
   $('#sync-status').textContent = 'Google 연결을 불러올 수 없어요. 이 브라우저에 저장 중이에요.';
   if (shareMode === 'receive' && sharedSchedule) $('#schedule-share-status').textContent = 'Google 연결을 불러올 수 없어요. 새로고침한 뒤 다시 시도해 주세요.';
 });
+
+/* 일정 상세: 더보기 메뉴 */
+const moreActions = $('#more-actions');
+if (moreActions) {
+  const menu = moreActions.querySelector('.more-menu');
+  const syncMore = () => { moreActions.hidden = [...menu.children].every(button => button.hidden); if (moreActions.hidden) moreActions.open = false; };
+  new MutationObserver(syncMore).observe(menu, {subtree:true, attributes:true, attributeFilter:['hidden']});
+  syncMore();
+  menu.addEventListener('click', () => moreActions.open = false);
+  document.addEventListener('click', event => { if (moreActions.open && !moreActions.contains(event.target)) moreActions.open = false; });
+  dialog.addEventListener('close', () => moreActions.open = false);
+}
+
+/* 일정 상세: 접힌 칸 제목 옆 요약 */
+function sectionMeta(section) {
+  switch (section.id) {
+    case 'schedule-basic': return '';
+    case 'schedule-gear': return gear.length ? `${gear.filter(item => item.checked).length}/${gear.length}` : '';
+    case 'hike-media': return [hikePhotos.length && `사진 ${hikePhotos.length}장`, hikeHasTrack(hikeTrack) && 'GPX'].filter(Boolean).join(' · ');
+    case 'editor-certification': {
+      const total = section.querySelectorAll('input[type=checkbox]').length;
+      return total ? `${section.querySelectorAll('input[type=checkbox]:checked').length}/${total} 인증` : '';
+    }
+    case 'schedule-notice': return field('notice')?.value.trim() ? '작성됨' : '';
+  }
+  const filled = [...section.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]),textarea')]
+    .filter(input => input.name && input.value.trim()).length;
+  return filled ? `${filled}개 입력` : '';
+}
+function renderSectionMeta() {
+  cancelAnimationFrame(renderSectionMeta.frame);
+  renderSectionMeta.frame = requestAnimationFrame(() => {
+    for (const meta of document.querySelectorAll('#editor [data-section-meta]')) {
+      try { meta.textContent = sectionMeta(meta.closest('details')); } catch { meta.textContent = ''; }
+    }
+  });
+}
+for (const type of ['input', 'change', 'click']) $('#form')?.addEventListener(type, renderSectionMeta);

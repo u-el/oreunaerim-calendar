@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=nickname"><script defer src="app.js?v=nickname"></script>
+<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=polish-4"><script defer src="app.js?v=polish-4"></script>
 <script>try{var c=localStorage.getItem('oreunaerim:color-scheme');document.documentElement.dataset.color=(c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="오르내림">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=night">
@@ -524,11 +524,11 @@
   <div class="install-actions"><button type="button" class="primary" id="install-action" hidden>앱으로 설치</button><button type="button" id="install-close" aria-label="설치 안내 닫기">닫기</button></div>
 </aside>
 <footer><div class="sync-panel" aria-label="계정 동기화">
-  <span id="sync-status" role="status">이 브라우저에 저장 중</span>
+  <button id="nickname-edit" type="button" hidden>닉네임 설정</button>
+  <span id="sync-status" role="status">이 브라우저에 저장 중</span><span class="footer-break" aria-hidden="true"></span>
   <button id="google-login" type="button" hidden>Google로 로그인</button>
   <div class="login-browser-help" id="calendar-login-help" data-login-help hidden><p role="status"></p><button type="button">브라우저에서 열 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
   <button id="import-local" type="button" hidden>이 브라우저의 일정 가져오기</button>
-  <button id="nickname-edit" type="button" hidden>닉네임 설정</button>
   <button id="google-logout" type="button" hidden>로그아웃</button>
 </div><button id="export-backup" type="button">백업 내보내기</button></footer>
 </main>
@@ -551,7 +551,7 @@
 <p id="hike-overview-message" class="hint" role="status"></p>
 </section>
 <div id="editor-sections">
-<details class="editor-section" id="schedule-basic" open><summary>기본 정보</summary><div class="details-content">
+<details class="editor-section" id="schedule-basic" open><summary>기본 정보<span class="section-meta" data-section-meta></span></summary><div class="details-content">
 <div class="form-grid">
 <label id="category-field">모임 종류<select name="category"><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select></label>
 <label id="certification-type-field">인증 유형<select name="certificationType"><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option><option value="undecided">미정</option></select></label>
@@ -567,7 +567,7 @@
 </div>
 </div></details>
 <details class="editor-section" id="hike-planning" hidden>
-<summary>산행 코스와 집결</summary><div class="details-content">
+<summary>산행 코스와 집결<span class="section-meta" data-section-meta></span></summary><div class="details-content">
 <fieldset id="hike-fields"><legend>산행 코스</legend><div class="form-grid">
 <label>들머리<input name="trailhead" maxlength="150"></label>
 <label>경유지<input name="waypoints" maxlength="240"></label>
@@ -594,13 +594,13 @@
 </div></fieldset>
 </div></details>
 <details class="editor-section" id="hike-location" hidden>
-<summary>📍 현재 위치 저장</summary><div class="details-content">
+<summary>📍 현재 위치 저장<span class="section-meta" data-section-meta></span></summary><div class="details-content">
 <p class="hint">현장에서 들머리·정상·날머리 위치를 찍고, 아래 저장 버튼을 눌러 일정에 남기세요.</p>
 <div id="hike-pin-list" class="hike-pin-list"></div>
 <p id="hike-pin-status" class="hint" role="status"></p>
 </div></details>
 <details class="editor-section" id="hike-log" hidden>
-<summary>산행 기록</summary><div class="details-content">
+<summary>산행 기록<span class="section-meta" data-section-meta></span></summary><div class="details-content">
 <label>실제 소요시간<input name="actualTime" placeholder="예) 4시간 10분" maxlength="80"></label>
 <div class="form-grid">
 <label>실제 거리 (km)<input name="actualDistance" type="number" min="0" step="0.01" max="9999"></label>
@@ -616,7 +616,7 @@
 <label>막차·하산 교통<input name="returnNotes" maxlength="240"></label>
 </div></fieldset>
 </div></details>
-<details class="editor-section" id="hike-media" hidden><summary>사진·GPX</summary><div class="details-content">
+<details class="editor-section" id="hike-media" hidden><summary>사진·GPX<span class="section-meta" data-section-meta></span></summary><div class="details-content">
 <fieldset><legend>GPX 경로</legend>
 <label>GPX 가져오기<input type="file" id="hike-track" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
 <p class="hint">경로 미리보기와 계산한 수치가 일정에 저장돼요. 거리나 상승고도를 직접 입력하면 그 값으로 비교해요.</p>
@@ -629,7 +629,7 @@
 <p role="status" id="hike-photo-status" class="hint"></p>
 <div class="hike-photo-gallery" id="hike-photo-gallery" hidden></div>
 </div></details>
-<details class="editor-section" id="editor-certification" hidden><summary>인증 기록</summary><div class="details-content" id="certification">
+<details class="editor-section" id="editor-certification" hidden><summary>인증 기록<span class="section-meta" data-section-meta></span></summary><div class="details-content" id="certification">
 <div id="peaks"></div>
 <details id="certification-edit" open><summary>인증지 선택·수정</summary>
 <div class="bac-picker">
@@ -638,7 +638,7 @@
 <ul id="bac-connected" aria-label="연결한 BAC 인증지" hidden></ul>
 <p class="hint bac-sources">BAC 공식 목록 · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/114" target="_blank" rel="noopener noreferrer">명산100</a> · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/172" target="_blank" rel="noopener noreferrer">명산100+</a> · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/158" target="_blank" rel="noopener noreferrer">섬&amp;산</a></p>
 </div><label>인증 포인트<input name="peakNames" placeholder="예) 월영산 · 선유봉" maxlength="600"></label><p class="hint">포인트 여러 개는 가운데점(·)으로 구분해요. 비워두면 산 이름을 사용해요.</p></details></div></details>
-<details class="editor-section" id="schedule-gear"><summary>준비물 체크</summary><div class="details-content"><div class="gear-presets" id="gear-presets" aria-label="준비물 세트 추가"><span class="hint">세트로 추가</span><button type="button" data-gear-preset="day">당일치기</button><button type="button" data-gear-preset="winter">겨울 산행</button><button type="button" data-gear-preset="backpacking">백패킹</button><button type="button" data-gear-preset="safety">비상용품</button></div><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div>
+<details class="editor-section" id="schedule-gear"><summary>준비물 체크<span class="section-meta" data-section-meta></span></summary><div class="details-content"><div class="gear-presets" id="gear-presets" aria-label="준비물 세트 추가"><span class="hint">세트로 추가</span><button type="button" data-gear-preset="day">당일치기</button><button type="button" data-gear-preset="winter">겨울 산행</button><button type="button" data-gear-preset="backpacking">백패킹</button><button type="button" data-gear-preset="safety">비상용품</button></div><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div>
 <details class="gear-set-manager" id="gear-set-manager"><summary id="gear-set-count">내 세트 만들기</summary><div class="gear-set-body">
 <p class="hint">위 준비물 목록을 이름 붙여 저장하면, 다음 일정에서 ★ 버튼 한 번으로 넣을 수 있어요.</p>
 <div class="inline gear-set-form"><input id="gear-set-name" maxlength="30" placeholder="예) 지리산 1박, 여름 계곡" aria-label="새 세트 이름"><button type="button" id="gear-set-save">지금 목록 저장</button></div>
@@ -646,12 +646,12 @@
 <ul id="gear-set-list" class="gear-set-list" aria-label="내 준비물 세트"></ul>
 <p id="gear-set-sync" class="hint"></p>
 </div></details></div></details>
-<details class="editor-section" id="schedule-notice"><summary>공지 초안</summary><div class="details-content">
+<details class="editor-section" id="schedule-notice"><summary>공지 초안<span class="section-meta" data-section-meta></span></summary><div class="details-content">
 <label>공지사항 초안<textarea name="notice" rows="5" placeholder="집결 장소, 출발 시간, 코스, 준비물 등을 적어두세요."></textarea></label>
 <button type="button" id="build-hike-notice" hidden>산행 정보로 공지 미리보기</button>
 <div id="hike-notice-preview" hidden><label>벙 공지 미리보기<textarea id="hike-notice-text" rows="8" readonly></textarea></label><button type="button" id="copy-hike-notice">공지 복사</button><p id="hike-notice-status" role="status" class="hint"></p></div>
 </div></details>
-<details class="editor-section" id="schedule-details"><summary>세부 정보</summary>
+<details class="editor-section" id="schedule-details"><summary>세부 정보<span class="section-meta" data-section-meta></span></summary>
 <div class="details-content">
 <div class="form-grid">
 <label>숙소<input name="lodging" placeholder="미정"></label>
@@ -663,7 +663,7 @@
 </details>
 </div>
 </div>
-<div class="dialog-actions"><button type="button" id="share-schedule" hidden>일정 공유하기</button><button type="button" id="export-ics" hidden>내 캘린더 앱에 추가</button><button type="button" id="duplicate-schedule" hidden>복제해서 새 일정</button><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
+<div class="dialog-actions"><details class="more-actions" id="more-actions" hidden><summary aria-label="더보기">⋯ 더보기</summary><div class="more-menu"><button type="button" id="share-schedule" hidden>일정 공유하기</button><button type="button" id="export-ics" hidden>내 캘린더 앱에 추가</button><button type="button" id="duplicate-schedule" hidden>복제해서 새 일정</button><button type="button" id="delete-schedule" hidden>일정 삭제</button></div></details><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
 </form></dialog>
 <div role="status" id="toast"></div>
 <dialog id="photo-album" aria-labelledby="photo-album-title">
