@@ -99,9 +99,12 @@ const bacKey = value => value.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{
 const bacCatalog = Object.entries(JSON.parse($('#bac-catalog')?.textContent || '{}')).flatMap(([type, rows]) =>
   rows.map(([name, summit, altitude, region]) => {
     const baseName = name.replace(/\s*\([^)]*\)/g, '');
-    const pointName = summit.replace(/\s*(정상석|인증석)$/, '');
-    const aliases = new Set([name, baseName, baseName + summit, baseName + pointName].map(bacKey));
-    return {id:`${type}:${name}`, type, name, summit, altitude, region, aliases,
+    const pointName = summit.replace(/\s*(정상석|인증석|표지판)$/, '');
+    const hasSpecificPoint = pointName && !/^(정상|이정목|인증지|인증점)$|[,/()]/.test(pointName) &&
+      !bacKey(name).includes(bacKey(pointName));
+    const label = hasSpecificPoint ? name + ' ' + pointName : name;
+    const aliases = new Set([name, label, baseName, baseName + summit, baseName + pointName].map(bacKey));
+    return {id:`${type}:${name}`, type, name, label, summit, altitude, region, aliases,
       search:bacKey([name, summit, altitude, region, bacProgramLabels[type], certificationTypes[type]].join(' '))};
   }));
 const bacById = new Map(bacCatalog.map(place => [place.id, place]));
@@ -133,7 +136,7 @@ function renderBacLinks() {
   const links = scheduleBacLinks(bacLinks, type, points);
   list.innerHTML = links.map(({id, point}) => {
     const place = bacById.get(id);
-    const label = place ? `${place.name} · ${place.region}` : point;
+    const label = place ? `${place.label} · ${place.region}` : point;
     return `<li><span>${escape(label)}</span><button type="button" data-bac-unlink="${escape(id)}" aria-label="${escape(place?.name || point)} 연결 해제">연결 해제</button></li>`;
   }).join('');
   list.hidden = !links.length;
@@ -172,7 +175,7 @@ function selectBacPlace(id) {
   const previous = scheduleBacLinks(bacLinks, place.type, points);
   const existing = previous.find(link => link.id === id);
   const available = points.find(point => place.aliases.has(bacKey(point)) && !previous.some(link => link.point === point));
-  const point = existing?.point || available || place.name;
+  const point = existing?.point || available || place.label;
   const text = [...new Set([...points, point])].join(' · ');
   if (text.length > pointsField.maxLength) {
     $('#bac-status').textContent = '한 일정에 연결할 수 있는 인증 포인트 길이를 초과했어요.';
