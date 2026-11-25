@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=hike-album-controls"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=cert-shortcuts-hike-summary"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -75,6 +75,10 @@
 #photo-album-image { display: block; width: 100%; max-height: 68dvh; object-fit: contain; margin-block: 10px; touch-action: pan-y pinch-zoom; }
 #photo-album button { min-height: 44px; }
 #photo-album-count { margin-inline: auto; }
+.certification-cards button.certification-count { width: 100%; min-width: 0; text-align: left; cursor: pointer; }
+.certification-count > .bar { display: block; }
+.certification-count:focus-visible { outline: 2px solid #276749; outline-offset: 2px; }
+.hike-card-metrics { display: block; color: var(--pine, #24533c); font-size: .84rem; font-weight: 700; overflow-wrap: anywhere; }
 </style>
 <!-- BAC public certification locations, checked 2026-11-25. Cheonseongsan details from the BAC September 12 bus listing. -->
 <script type="application/json" id="bac-catalog">{
