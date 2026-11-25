@@ -409,6 +409,19 @@ function renderBacProgress() {
 }
 
 const sharePrefix = '#schedule=';
+// 카톡 같은 메신저가 링크를 중간에서 자르지 않도록 영문·숫자·-_ 만 쓰는 짧은 형식
+const shortSharePrefix = '#s=';
+const isShareHash = hash => hash.startsWith(shortSharePrefix) || hash.startsWith(sharePrefix);
+function toBase64Url(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function fromBase64Url(value) {
+  const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((value.length + 3) % 4));
+  return new TextDecoder().decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
+}
 const sharedFields = {
   name:'일정 이름', category:'모임 종류', start:'시작 날짜', end:'종료 날짜', region:'지역', type:'일정 유형',
   meetingTime:'집결 시간', meetingPlace:'집결 장소', trailhead:'들머리', waypoints:'경유지', summit:'정상',
@@ -447,13 +460,17 @@ function cleanSharedSchedule(input) {
 }
 
 function encodeScheduleShare(record, id, from) {
-  return encodeURIComponent(JSON.stringify(from ? {v:1, id, record, from} : {v:1, id, record}));
+  return toBase64Url(JSON.stringify(from ? {v:1, id, record, from} : {v:1, id, record}));
 }
 
 function decodeScheduleShare(hash) {
   try {
     if (hash.length > 6500) return null;
-    const data = JSON.parse(decodeURIComponent(hash.slice(sharePrefix.length)));
+    // 메신저가 끝에 붙이는 문장부호·공백은 떼고 읽음
+    const raw = hash.startsWith(shortSharePrefix)
+      ? fromBase64Url(hash.slice(shortSharePrefix.length).replace(/[^A-Za-z0-9_-].*$/s, ''))
+      : decodeURIComponent(hash.slice(sharePrefix.length));
+    const data = JSON.parse(raw);
     if (data.v !== 1 || typeof data.id !== 'string' || !/^[a-f0-9-]{36}$/.test(data.id)) return null;
     const record = cleanSharedSchedule(data.record);
     sharedFrom = typeof data.from === 'string' ? data.from.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 20) : '';
@@ -607,7 +624,7 @@ function initScheduleShare() {
   $('#schedule-share-close').onclick = () => share.close();
   share.onclose = () => {
     if (share.open) return;
-    if (shareMode === 'receive' && location.hash.startsWith(sharePrefix)) {
+    if (shareMode === 'receive' && isShareHash(location.hash)) {
       history.replaceState(null, '', location.pathname + location.search);
     }
     shareMode = '';
@@ -622,7 +639,7 @@ function initScheduleShare() {
         status.textContent = '공유 링크가 너무 길어요. 일정의 코스나 준비물 내용을 줄이고 다시 저장해 주세요.';
         return;
       }
-      output.value = new URL('.', location.href).href + sharePrefix + packed;
+      output.value = new URL('.', location.href).href + shortSharePrefix + packed;
     }
     $('#schedule-share-url-row').hidden = false;
     try {
@@ -670,7 +687,7 @@ function initScheduleShare() {
     }
   };
   const openIncoming = () => {
-    if (location.hash.startsWith(sharePrefix)) showScheduleShare('receive', decodeScheduleShare(location.hash));
+    if (isShareHash(location.hash)) showScheduleShare('receive', decodeScheduleShare(location.hash));
   };
   window.addEventListener('hashchange', openIncoming);
   openIncoming();

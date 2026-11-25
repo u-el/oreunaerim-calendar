@@ -177,8 +177,9 @@ async function run(browser, base, width) {
     showScheduleShare('receive', decodeScheduleShare(url.slice(url.indexOf('#'))));
     const title = document.querySelector('#schedule-share-title').textContent;
     document.querySelector('#schedule-share-dialog').close();
-    return {note, title};
+    return {note, title, url};
   });
+  check(`${label} 공유: 링크에 메신저가 끊을 만한 글자 없음`, /#s=[A-Za-z0-9_-]+$/.test(sent.url), sent.url.slice(-40));
   check(`${label} 공유: 보내는 창에 닉네임 안내`, sent.note.includes('점검용'), sent.note);
   check(`${label} 공유: 받는 쪽 제목에 닉네임`, sent.title === '점검용님이 공유한 일정', sent.title);
 
