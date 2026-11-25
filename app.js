@@ -103,7 +103,9 @@ const bacCatalog = Object.entries(JSON.parse($('#bac-catalog')?.textContent || '
     const hasSpecificPoint = pointName && !/^(정상|이정목|인증지|인증점)$|[,/()]/.test(pointName) &&
       !bacKey(name).includes(bacKey(pointName));
     const label = hasSpecificPoint ? name + ' ' + pointName : name;
-    const aliases = new Set([name, label, baseName, baseName + summit, baseName + pointName].map(bacKey));
+    const plainSummit = summit.split('(')[0].replace(/\s*(정상석|인증석|표지판)$/, '').trim();
+    const summitAlias = plainSummit && !/^(정상|이정목|인증지|인증점)$|[,/]/.test(plainSummit) ? [plainSummit, baseName + plainSummit] : [];
+    const aliases = new Set([name, label, baseName, baseName + summit, baseName + pointName, ...summitAlias].map(bacKey));
     return {id:`${type}:${name}`, type, name, label, summit, altitude, region, aliases,
       search:bacKey([name, summit, altitude, region, bacProgramLabels[type], certificationTypes[type]].join(' '))};
   }));
@@ -244,6 +246,147 @@ function countCertifiedPeaks(type) {
   return count;
 }
 
+function renderHikeOverview() {
+  const overview = $('#hike-overview');
+  if (!overview) return;
+  const record = readScheduleFields();
+  overview.hidden = !isHike(record.category);
+  if (overview.hidden) return;
+  const done = record.status === 'done';
+  $('#hike-overview-name').textContent = record.name || '산행 요약';
+  $('#hike-overview-status').textContent = done ? '완료' : '예정';
+  const certification = record.certificationType === 'undecided' ? '미정' :
+    [certificationTypes[record.certificationType], certificationPoints(record).join(' · ')].filter(Boolean).join(' · ');
+  const rows = [
+    ['날짜', scheduleDate(record, true)],
+    ['집결', [record.meetingTime, record.meetingPlace].filter(Boolean).join(' · ')],
+    ['들머리', record.trailhead],
+    ['거리·예상 시간', [record.distance && record.distance+' km', record.estimatedTime].filter(Boolean).join(' · ')],
+    ['인증', certification]
+  ];
+  $('#hike-overview-data').innerHTML = rows.filter(([, value]) => value).map(([label, value]) =>
+    '<div><dt>'+escape(label)+'</dt><dd>'+escape(value)+'</dd></div>').join('');
+  const map = $('#hike-overview-map');
+  const url = mapLink(record.mapUrl);
+  map.hidden = !url;
+  if (url) map.href = url;
+  else map.removeAttribute('href');
+  for (const action of overview.querySelectorAll('[data-hike-jump]')) {
+    action.hidden = (action.dataset.hikePhase && action.dataset.hikePhase !== record.status) ||
+      (action.dataset.hikeJump === 'hike-location' && !editing.id);
+  }
+}
+
+function layoutScheduleSections(reset = false) {
+  const container = $('#editor-sections');
+  if (!container) return;
+  const hike = isHike(field('category').value);
+  const done = field('status').value === 'done';
+  const priority = !hike ? ['schedule-basic','schedule-gear','schedule-notice'] : done ?
+    ['editor-certification','hike-media','hike-log','schedule-basic','hike-location','hike-planning','schedule-gear','schedule-notice'] :
+    ['schedule-basic','hike-planning','schedule-gear','schedule-notice','hike-location','editor-certification','hike-media','hike-log'];
+  const active = document.activeElement;
+  if (reset || container.dataset.layout !== priority.join(' ')) {
+    for (const id of priority) container.insertBefore(document.getElementById(id), $('#schedule-details'));
+
+    container.dataset.layout = priority.join(' ');
+    if (active && container.contains(active)) active.focus({preventScroll:true});
+  }
+  if (reset) {
+    for (const section of container.children) section.open = false;
+    $('#schedule-basic').open = !hike || !editing.id;
+    $('#editor-certification').open = hike && done;
+    $('#certification-edit').open = !done;
+  }
+  $('#editor-certification').hidden = !hike;
+}
+
+function revealScheduleSection(id) {
+  const section = document.getElementById(id);
+  if (!section || section.hidden) return;
+  section.open = true;
+  section.querySelector('summary').focus({preventScroll:true});
+  section.scrollIntoView({block:'start'});
+}
+
+function bacScheduleIndex() {
+  const index = new Map();
+  for (const record of records) {
+    if (!isHike(categoryOf(record))) continue;
+    const type = certificationTypeOf(record);
+    if (!Object.hasOwn(bacProgramLabels, type)) continue;
+    const complete = isCompletedCertification(record);
+    if (!complete && record.status !== 'planned') continue;
+    const points = complete ? record.certified : certificationPoints(record);
+    const links = scheduleBacLinks(record.bacLinks, type, points);
+    for (const point of points) {
+      const explicit = links.find(link => link.point === point);
+      const id = explicit?.id || legacyBacMatch(type, point, record.region || '');
+      if (!id) continue;
+      const current = index.get(id);
+      if (!current || (complete && current.status !== 'done')) {
+        index.set(id, {status:complete ? 'done' : 'planned', record});
+      }
+    }
+  }
+  return index;
+}
+
+const bacListLabels = {done:'완료', planned:'예정', unvisited:'미방문'};
+const bacPageSize = 12;
+let bacListLimit = bacPageSize;
+
+function renderBacProgress() {
+  const panel = $('#bac-progress');
+  if (!panel?.open) return;
+  const list = $('#bac-progress-list');
+  const message = $('#bac-progress-count');
+  const more = $('#bac-progress-more');
+  if ((account && !cloudReady) || (!account && readError)) {
+    list.replaceChildren();
+    more.hidden = true;
+    message.textContent = account ? $('#sync-status').textContent : '저장된 일정을 불러올 수 없어요.';
+    return;
+  }
+  const type = $('#bac-progress-type').value;
+  const filter = $('#bac-progress-status').value;
+  const terms = $('#bac-progress-search').value.trim().split(/\s+/).map(bacKey).filter(Boolean);
+  const schedules = bacScheduleIndex();
+  const entries = bacCatalog.filter(place => place.type === type && terms.every(term => place.search.includes(term)))
+    .map(place => ({place, ...schedules.get(place.id)}));
+  const matching = entries.filter(entry => (entry.status || 'unvisited') === filter);
+  message.textContent = matching.length ? bacListLabels[filter]+' '+matching.length+'곳' : '조건에 맞는 인증지가 없어요.';
+  list.innerHTML = matching.slice(0, bacListLimit).map(({place, record}) => {
+    const details = [place.summit, place.altitude, place.region, record?.start && scheduleDate(record, true)].filter(Boolean).join(' · ');
+    const button = record ? '<button type="button" data-record="'+escape(record.id)+'" aria-label="'+escape(place.name)+' 일정 보기">일정 보기</button>' :
+      '<button type="button" data-bac-plan="'+escape(place.id)+'" aria-label="'+escape(place.name)+' 일정 만들기">일정 만들기</button>';
+    return '<li><div><strong>'+escape(place.name)+'</strong><small>'+escape(details)+'</small></div>'+button+'</li>';
+  }).join('');
+  more.hidden = matching.length <= bacListLimit;
+}
+
+function initBacProgress() {
+  const panel = $('#bac-progress');
+  panel.ontoggle = renderBacProgress;
+  panel.oninput = () => {
+    bacListLimit = bacPageSize;
+    renderBacProgress();
+  };
+  $('#bac-progress-more').onclick = () => {
+    const firstNew = bacListLimit;
+    bacListLimit += bacPageSize;
+    renderBacProgress();
+    $('#bac-progress-list').children[firstNew]?.querySelector('button')?.focus();
+  };
+  $('#bac-progress-list').onclick = event => {
+    const id = event.target.closest('button')?.dataset.bacPlan;
+    const place = bacById.get(id);
+    if (!place) return;
+    openEditor({...blank(), name:place.name, region:place.region, certificationType:place.type,
+      peakNames:place.label, bacLinks:[{id:place.id, point:place.label}]});
+  };
+}
+
 function renderCertification() {
   const cards = $('#certification-cards');
   if (!cards) return;
@@ -259,6 +402,7 @@ function renderCertification() {
 
 function render() {
   renderCertification();
+  renderBacProgress();
   const active = menus[menu];
   document.body.dataset.theme = menu;
   document.querySelectorAll('[data-menu]').forEach(button => {
@@ -681,6 +825,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
     $('#hike-log').open = false;
     $('#hike-notice-preview').hidden = true;
     $('#hike-notice-status').textContent = '';
+    if ($('#hike-overview-message')) $('#hike-overview-message').textContent = '';
     renderHikePhoto();
     updateMapLink();
   }
@@ -698,7 +843,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
     renderHikeTrack();
   }
   field('category').value = categoryOf(record);
-  field('certificationType').value = record.id ? certificationTypeOf(record) : $('#certification-filter').value || 'island';
+  field('certificationType').value = record.certificationType || (record.id ? certificationTypeOf(record) : $('#certification-filter').value || 'island');
   bacLinks = Array.isArray(record.bacLinks) ? record.bacLinks : [];
   if ($('#bac-search')) {
     $('#bac-search').value = '';
@@ -712,9 +857,11 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   const deleteButton = $('#delete-schedule');
   if (deleteButton) deleteButton.hidden = !record.id;
   $('#complete').textContent = record.status === 'done' ? '완료 취소' : '완료 처리';
+  layoutScheduleSections(true);
   renderCategory();
   renderGear();
   dialog.showModal();
+  if ($("#editor-sections")) $(".editor-content").scrollTop = 0;
 }
 
 function renderCategory() {
@@ -723,7 +870,7 @@ function renderCategory() {
   field('name').placeholder = hike ? '예) 가라산' : '예) 연말 저녁 모임';
   $('#certification').hidden = $('#certification-type-field').hidden = !hike;
   $('#category-field').classList.toggle('full-width-field', !hike);
-  for (const section of [$('#hike-planning'), $('#hike-log')]) {
+  for (const section of [$('#hike-planning'), $('#hike-log'), $('#hike-media')]) {
     if (!section) continue;
     section.hidden = !hike;
     for (const input of section.querySelectorAll('input, select, textarea')) input.disabled = !hike;
@@ -741,6 +888,7 @@ function renderCategory() {
 
 function renderPeaks() {
   renderBacLinks();
+  renderHikeOverview();
   $('#peaks').innerHTML = certificationPoints({name:field('name').value, peakNames:field('peakNames')?.value}).map(name =>
     `<label class="checkrow"><input type="checkbox" value="${escape(name)}" ${checks.has(name) ? 'checked' : ''}> ${escape(name)} 인증 완료</label>`
   ).join('') || '<p class="hint">산 이름을 입력하면 인증 여부를 체크할 수 있어요.</p>';
@@ -809,7 +957,7 @@ async function loadHikePhoto(event) {
   }
 }
 
-function buildHikeNotice() {
+function hikeNoticeText() {
   const record = readScheduleFields();
   const route = [record.trailhead, record.waypoints, record.summit, record.trailEnd].filter(Boolean).join(' → ');
   const meetup = [record.meetingTime, record.meetingPlace].filter(Boolean).join(' · ');
@@ -830,10 +978,34 @@ function buildHikeNotice() {
   const title = record.name ? '🏔️ '+record.name+' 산행' : '🏔️ 산행 안내';
   const details = lines.filter(([,value]) => value).map(([label,value]) => label+'　'+value).join('\n');
   const note = record.notice ? '💬 벙주 한마디\n'+record.notice : '';
-  $('#hike-notice-text').value = [title, details, note].filter(Boolean).join('\n\n');
+  return [title, details, note].filter(Boolean).join('\n\n');
+}
+
+function buildHikeNotice() {
+  $('#hike-notice-text').value = hikeNoticeText();
   $('#hike-notice-preview').hidden = false;
   $('#hike-notice-status').textContent = '';
   $('#hike-notice-text').focus();
+}
+
+async function copyHikeNotice(fromOverview = false) {
+  const record = editing;
+  const preview = $('#hike-notice-text');
+  const text = fromOverview ? hikeNoticeText() : preview.value;
+  const status = $(fromOverview ? '#hike-overview-message' : '#hike-notice-status');
+  try {
+    await navigator.clipboard.writeText(text);
+    if (dialog.open && editing === record) status.textContent = '공지 초안을 복사했어요.';
+  } catch {
+    if (!dialog.open || editing !== record) return;
+    if (fromOverview) {
+      revealScheduleSection('schedule-notice');
+      buildHikeNotice();
+    }
+    preview.focus();
+    preview.select();
+    $('#hike-notice-status').textContent = '선택된 공지 초안을 복사해 주세요.';
+  }
 }
 
 function renderGear() {
@@ -1000,6 +1172,7 @@ if (certificationShortcut) certificationShortcut.onclick = () => {
 };
 field('category').onchange = () => {
   field('name').setCustomValidity('');
+  layoutScheduleSections();
   renderCategory();
 };
 $('.tabs').onclick = event => {
@@ -1020,7 +1193,7 @@ document.addEventListener('click',event => {
   const record = records.find(item => item.id === button.dataset.record);
   if (!record) return;
   openEditor(record);
-  if (button.classList.contains('hike-feed-card')) $('#hike-log').open = true;
+  if (button.classList.contains('hike-feed-card')) ($('#hike-media') || $('#hike-log')).open = true;
 });
 $('#calendar').onclick = event => {
   const day = event.target.closest('[data-day]');
@@ -1066,20 +1239,24 @@ if ($('#hike-photo')) {
     renderHikePhoto('첨부 사진을 제거했어요.');
   };
   $('#build-hike-notice').onclick = buildHikeNotice;
-  $('#copy-hike-notice').onclick = async () => {
-    const text = $('#hike-notice-text');
-    const status = $('#hike-notice-status');
-    try {
-      await navigator.clipboard.writeText(text.value);
-      status.textContent = '공지 초안을 복사했어요.';
-    } catch {
-      text.focus();
-      text.select();
-      status.textContent = '선택된 공지 초안을 복사해 주세요.';
-    }
-  };
+  $('#copy-hike-notice').onclick = () => copyHikeNotice();
 }
 if ($('#bac-search')) initBacPicker();
+if ($('#bac-progress')) initBacProgress();
+if ($('#hike-overview')) {
+  $('#hike-overview').onclick = event => {
+    const section = event.target.closest('[data-hike-jump]')?.dataset.hikeJump;
+    if (section) revealScheduleSection(section);
+  };
+  $('#hike-overview-copy').onclick = () => copyHikeNotice(true);
+  for (const name of ['start','end','meetingTime','meetingPlace','trailhead','distance','estimatedTime','mapUrl','certificationType']) {
+    field(name).addEventListener('input', renderHikeOverview);
+  }
+  field('status').addEventListener('change', () => {
+    layoutScheduleSections();
+    renderHikeOverview();
+  });
+}
 field('name').oninput = () => {field('name').setCustomValidity('');renderPeaks();};
 field('start').oninput = field('end').oninput = () => field('end').setCustomValidity('');
 $('#peaks').onchange = ({target}) => {
@@ -1157,6 +1334,7 @@ function changeAccount(user) {
     cloudReady = false;
     status.textContent = '계정 일정에 연결할 수 없어요.';
     if (showingHikeFeed) render();
+    else renderBacProgress();
   });
 }
 
