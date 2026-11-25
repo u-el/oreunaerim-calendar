@@ -1361,6 +1361,8 @@ function exportScheduleIcs() {
 
 function scheduleDate(record, includeYear) {
   if (!record.start) return '날짜 미정';
+  // 'auto': 올해 일정은 연도를 빼고, 다른 해에 걸친 일정만 연도를 붙임
+  if (includeYear === 'auto') includeYear = [record.start, record.end].some(date => date && date.slice(0, 4) !== today.slice(0, 4));
   const format = date => new Intl.DateTimeFormat('ko-KR', {
     year: includeYear ? 'numeric' : undefined, month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul'
   }).format(new Date(date+'T00:00:00+09:00'));
@@ -1383,7 +1385,7 @@ function scheduleCard(record, displayView) {
   const summary = isHike(category) && record.status === 'done' ? actualHikeSummary(record) : '';
   const stamped = status === 'certified';
   const card = `<button class="schedule-card card kind-${kind}${stamped ? ' is-stamped' : ''}" type="button" data-record="${escape(record.id)}">
-    <span class="schedule-date">${escape(scheduleDate(record, displayView !== 'month'))}</span>
+    <span class="schedule-date">${escape(scheduleDate(record, displayView === 'month' ? false : displayView === 'planned' ? 'auto' : true))}</span>
     <span class="schedule-card-body">
       <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong>${stamped ? '' : `<span class="schedule-status status-${status}">${statusLabel}</span>`}</span>
       <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
