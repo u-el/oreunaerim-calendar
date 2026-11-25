@@ -2167,7 +2167,19 @@ addEventListener('offline', () => {
 });
 renderOfflineBanner();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js').then(() => navigator.serviceWorker.ready)
+    .then(() => new Promise(resolve => setTimeout(resolve, 5000))).then(async () => {
+    // 첫 방문 때는 서비스 워커가 늦게 켜져서 이미 받은 파일이 저장되지 않으므로 직접 저장
+    const urls = [location.origin + location.pathname, ...performance.getEntriesByType('resource').map(entry => entry.name)]
+      .filter(url => url.startsWith(location.origin + '/') || url.startsWith('https://www.gstatic.com/firebasejs/'))
+      .filter(url => !/\/sw\.js(\?|$)/.test(url));
+    const cache = await caches.open('oreunaerim-offline-v1');
+    await Promise.all(urls.map(async url => {
+      if (await cache.match(url)) return;
+      const response = await fetch(url, {cache:'force-cache'}).catch(() => null);
+      if (response?.ok) await cache.put(url, response);
+    }));
+  }).catch(() => {});
 }
 
 initLoginBrowserHelp();
