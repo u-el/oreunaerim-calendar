@@ -54,7 +54,8 @@ const field = name => form.elements.namedItem(name);
 const allFields = ['category','certificationType','name','region','start','end','type','host','people','lodging','overnight','transport','budget','status','memo','notice',
   'trailhead','waypoints','summit','trailEnd','routeType','distance','estimatedTime','difficulty',
   'meetingTime','meetingPlace','mapUrl','parking','vehiclePickup','campsite','campBooking','waterSource',
-  'actualTime','actualRoute','hikeNotes','peakNames'];
+  'actualTime','actualRoute','hikeNotes','peakNames','plannedAscent','actualDistance','actualAscent',
+  'facilityNotes','parkingNotes','junctionNotes','returnNotes'];
 const readScheduleFields = () => Object.fromEntries(allFields.filter(name => field(name)).map(name => [name,field(name).value.trim()]));
 const certificationPoints = record => [...new Set(names(record.peakNames?.trim() || record.name))];
 const hikingMetrics = record => [record.routeType, record.distance && record.distance+'km', record.estimatedTime, record.difficulty && '난이도 '+record.difficulty].filter(Boolean).join(' · ');
@@ -196,22 +197,254 @@ const calendarKind = record => {
 };
 const calendarDot = kind => `<i class="calendar-dot ${kind}" aria-hidden="true"></i>`;
 
+const hikePinLabels = {trailhead:'들머리', summit:'정상', trailEnd:'날머리'};
+let hikePins = {};
+let hikeTrack = null;
+let hikeRequest = 0;
+let positionRequest = 0;
+let hikeLoading = false;
+let locatingHike = false;
+
+function validHikePoint(point) {
+  return Number.isFinite(point?.lat) && Math.abs(point.lat) <= 90 &&
+    Number.isFinite(point.lon) && Math.abs(point.lon) <= 180;
+}
+
+function trackDistance(first, second) {
+  const rad = Math.PI / 180;
+  const a = Math.sin((second.lat - first.lat) * rad / 2) ** 2 +
+    Math.cos(first.lat * rad) * Math.cos(second.lat * rad) * Math.sin((second.lon - first.lon) * rad / 2) ** 2;
+  return 12742000 * Math.asin(Math.sqrt(Math.min(1, a)));
+}
+
+function parseHikeTrack(text, filename) {
+  if (/<!DOCTYPE|<!ENTITY/i.test(text)) throw new Error('Unsupported GPX declaration');
+  const root = new DOMParser().parseFromString(text, 'application/xml').documentElement;
+  if (root.localName !== 'gpx') throw new Error('Invalid GPX');
+  const children = (node, name) => Array.from(node.children).filter(child => child.localName === name);
+  const readNumber = value => value?.trim() ? Number(value) : NaN;
+  const tracks = children(root, 'trk').flatMap(track => children(track, 'trkseg').map(segment => children(segment, 'trkpt')));
+  const routes = children(root, 'rte').map(route => children(route, 'rtept'));
+  const pointGroups = tracks.some(group => group.length >= 2) ? tracks : routes;
+  if (pointGroups.reduce((total, group) => total + group.length, 0) > 100000) throw new Error('GPX has too many points');
+  const segments = pointGroups.map(group => group.map(node => {
+    const elevation = readNumber(children(node, 'ele')[0]?.textContent);
+    return {
+      lat:readNumber(node.getAttribute('lat')), lon:readNumber(node.getAttribute('lon')),
+      elevation:Math.abs(elevation) <= 12000 ? elevation : NaN,
+      time:Date.parse(children(node, 'time')[0]?.textContent)
+    };
+  }).filter(validHikePoint)).filter(group => group.length >= 2);
+  if (!segments.length || segments.length > 200) throw new Error('Unsupported GPX segments');
+
+  let distance = 0, ascent = 0, elevationPairs = 0;
+  let south = Infinity, north = -Infinity, west = Infinity, east = -Infinity;
+  let low = Infinity, high = -Infinity;
+  const origin = segments[0][0].lon;
+  for (const segment of segments) {
+    let previous;
+    for (const point of segment) {
+      if (previous) {
+        distance += trackDistance(previous, point);
+        if (Number.isFinite(point.elevation) && Number.isFinite(previous.elevation)) {
+          elevationPairs++;
+          ascent += Math.max(0, point.elevation - previous.elevation);
+        }
+      }
+      point.distance = distance;
+      point.x = origin + ((point.lon - origin + 540) % 360) - 180;
+      west = Math.min(west, point.x);
+      east = Math.max(east, point.x);
+      south = Math.min(south, point.lat);
+      north = Math.max(north, point.lat);
+      if (Number.isFinite(point.elevation)) {
+        low = Math.min(low, point.elevation);
+        high = Math.max(high, point.elevation);
+      }
+      previous = point;
+    }
+  }
+  const cosLat = Math.cos((south + north) * Math.PI / 360);
+  const scale = Math.min(344 / (Math.max(east - west, 0.000001) * cosLat), 104 / Math.max(north - south, 0.000001));
+  const xy = (x, y) => `${Math.round(x)},${Math.round(y)}`;
+  const path = (groups, project) => groups.map(group => {
+    const stride = Math.max(1, Math.ceil((group.length - 1) / Math.max(1, Math.floor(500 / groups.length))));
+    return group.filter((_, i) => i % stride === 0 || i === group.length - 1)
+      .map((point, i) => (i ? 'L' : 'M') + project(point)).join('');
+  }).join('');
+  const route = path(segments, point => xy(180 + (point.x - (west + east) / 2) * cosLat * scale,
+    60 + ((south + north) / 2 - point.lat) * scale));
+  const elevationGroups = [];
+  for (const segment of segments) {
+    let group = [];
+    for (const point of segment) {
+      if (Number.isFinite(point.elevation)) group.push(point);
+      else if (group.length) {
+        if (group.length > 1) elevationGroups.push(group);
+        group = [];
+      }
+    }
+    if (group.length > 1) elevationGroups.push(group);
+  }
+  const profile = distance ? path(elevationGroups.slice(0, 200), point =>
+    xy(8 + point.distance * 344 / distance, high === low ? 60 : 112 - (point.elevation - low) * 104 / (high - low))) : '';
+  const elapsed = segments[segments.length - 1].at(-1).time - segments[0][0].time;
+  const completeElevation = elevationPairs === segments.reduce((count, segment) => count + segment.length - 1, 0);
+  return {
+    name:filename.slice(0, 150), route, profile, km:Math.round(distance / 10) / 100,
+    ascent:completeElevation ? Math.round(ascent) : null,
+    low:profile ? Math.round(low) : null, high:profile ? Math.round(high) : null,
+    minutes:elapsed > 0 ? Math.max(1, Math.round(elapsed / 60000)) : null
+  };
+}
+
+function validHikePath(path) {
+  return typeof path === 'string' && path.length <= 16000 && /^(?:[ML]\d{1,3},\d{1,3})+$/.test(path);
+}
+
+function hikeHasTrack(track) {
+  return validHikePath(track?.route) && Number.isFinite(track.km) && track.km >= 0;
+}
+
+function hikeChart(path, label, kind) {
+  if (!validHikePath(path)) return '';
+  return `<svg class="hike-chart hike-chart-${kind}" viewBox="0 0 360 120" role="img" aria-label="${label}"><path d="${path}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function hikeTrackPreview(track) {
+  if (!hikeHasTrack(track)) return '';
+  const profile = hikeChart(track.profile, '거리별 고도 그래프', 'elevation');
+  return `<span class="hike-track-preview">
+    <span>GPX 경로 · ${track.km} km</span>${hikeChart(track.route, '이동 경로', 'route')}
+    ${profile && `<span>고도 ${Number(track.low)}–${Number(track.high)} m · ${track.km} km</span>${profile}`}
+  </span>`;
+}
+
+function hikeComparison(record) {
+  const track = hikeHasTrack(record.hikeTrack) ? record.hikeTrack : null;
+  const metric = (value, unit) => value != null && value !== '' ? `${value} ${unit}` : '';
+  const minutes = track?.minutes;
+  const duration = Number.isFinite(minutes) && minutes > 0 ?
+    `${Math.floor(minutes / 60) ? Math.floor(minutes / 60) + '시간 ' : ''}${minutes % 60}분 (GPX 경과 시간)` : '';
+  const rows = [
+    ['거리', metric(record.distance, 'km'), metric(record.actualDistance || track?.km, 'km')],
+    ['시간', record.estimatedTime, record.actualTime || duration],
+    ['누적 상승', metric(record.plannedAscent, 'm'), metric(record.actualAscent || track?.ascent, 'm')]
+  ];
+  return `<table class="hike-comparison"><thead><tr><th scope="col">항목</th><th scope="col">계획</th><th scope="col">실제</th></tr></thead><tbody>${rows.map(([label, planned, actual]) =>
+    `<tr><th scope="row">${label}</th><td>${escape(planned || '—')}</td><td>${escape(actual || '—')}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function refreshHikeComparison() {
+  $('#hike-comparison').innerHTML = hikeComparison({...readScheduleFields(), hikeTrack});
+}
+
+function renderHikeTrack(message = '') {
+  $('#hike-track-preview').innerHTML = hikeTrackPreview(hikeTrack);
+  $('#hike-track-file').textContent = hikeTrack?.name || '';
+  $('#remove-hike-track').hidden = !hikeTrack;
+  $('#hike-track-status').textContent = message;
+  refreshHikeComparison();
+}
+
+async function loadHikeTrack(event) {
+  const input = event.currentTarget;
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  const request = ++hikeRequest;
+  hikeLoading = true;
+  $('#hike-track-status').textContent = 'GPX 불러오는 중…';
+  try {
+    if (file.size > 8 * 1024 * 1024) {
+      $('#hike-track-status').textContent = '8 MB 이하의 GPX 파일을 선택해 주세요.';
+      return;
+    }
+    const track = parseHikeTrack(await file.text(), file.name);
+    if (request !== hikeRequest || !dialog.open) return;
+    hikeTrack = track;
+    renderHikeTrack('경로를 불러왔어요. 일정에서 저장하면 기록에 남아요.');
+  } catch {
+    if (request === hikeRequest && dialog.open) $('#hike-track-status').textContent = '경로를 읽지 못했어요. 이동 경로가 담긴 GPX 파일인지 확인해 주세요.';
+  } finally {
+    if (request === hikeRequest) hikeLoading = false;
+  }
+}
+
+function renderHikePins() {
+  $('#hike-pin-list').innerHTML = Object.entries(hikePinLabels).map(([id, label]) => {
+    const point = hikePins[id];
+    const saved = validHikePoint(point);
+    const coords = saved ? `${point.lat.toFixed(5)}, ${point.lon.toFixed(5)}` : '';
+    return `<div class="hike-pin"><strong>${label}</strong><div class="hike-pin-actions">
+      <button type="button" data-locate-hike="${id}" ${locatingHike ? 'disabled' : ''}>${saved ? '현재 위치로 변경' : '현재 위치 저장'}<span class="hike-visually-hidden"> · ${label}</span></button>
+      ${saved ? `<a href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(coords)}" target="_blank" rel="noopener noreferrer" aria-label="${label} 지도 열기">지도 열기</a>
+      <button type="button" data-remove-hike-pin="${id}" aria-label="${label} 위치 지우기" ${locatingHike ? 'disabled' : ''}>지우기</button>` : ''}
+    </div>${saved ? `<small>${coords}${Number.isFinite(point.accuracy) ? ` · 오차 약 ${Math.round(point.accuracy)} m` : ''}</small>` : ''}</div>`;
+  }).join('');
+}
+
+function handleHikePin(event) {
+  if (!editing.id || pendingOperation || locatingHike || !isHike(field('category').value)) return;
+  const button = event.target.closest('button');
+  if (!button) return;
+  const status = $('#hike-pin-status');
+  const remove = button.dataset.removeHikePin;
+  if (remove) {
+    delete hikePins[remove];
+    renderHikePins();
+    status.textContent = `${hikePinLabels[remove]} 위치를 지웠어요. 일정에서 저장하면 반영돼요.`;
+    $('#hike-pin-list').querySelector(`[data-locate-hike="${remove}"]`).focus();
+    return;
+  }
+  const id = button.dataset.locateHike;
+  if (!id) return;
+  if (!navigator.geolocation) {
+    status.textContent = '이 브라우저에서는 현재 위치를 읽을 수 없어요.';
+    return;
+  }
+  const request = ++positionRequest;
+  locatingHike = true;
+  renderHikePins();
+  status.textContent = `${hikePinLabels[id]} 위치를 찾는 중…`;
+  const finish = message => {
+    locatingHike = false;
+    renderHikePins();
+    status.textContent = message;
+    if (isHike(field('category').value)) $('#hike-pin-list').querySelector(`[data-locate-hike="${id}"]`).focus();
+  };
+  navigator.geolocation.getCurrentPosition(({coords}) => {
+    if (request !== positionRequest || !dialog.open) return;
+    const point = {lat:Number(coords.latitude.toFixed(5)), lon:Number(coords.longitude.toFixed(5)), accuracy:Math.round(coords.accuracy)};
+    if (!validHikePoint(point) || !Number.isFinite(point.accuracy)) {
+      finish('위치를 확인할 수 없어요. 잠시 뒤 다시 시도해 주세요.');
+      return;
+    }
+    hikePins[id] = point;
+    finish(`${hikePinLabels[id]} 위치를 찍었어요. 아래 저장 버튼을 누르면 일정에 남아요.`);
+  }, error => {
+    if (request !== positionRequest || !dialog.open) return;
+    finish(error.code === 1 ? '위치 접근이 차단되어 있어요. 아이폰 또는 브라우저의 위치 권한을 확인해 주세요.' : '현재 위치를 찾지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+  }, {enableHighAccuracy:true, timeout:15000, maximumAge:0});
+}
+
 function renderHikeFeed() {
   const posts = account && cloudReady ? records.filter(record => record.status === 'done' &&
-    isHike(categoryOf(record)) && hasHikePhoto(record)).sort((first, second) =>
+    isHike(categoryOf(record)) && (hasHikePhoto(record) || hikeHasTrack(record.hikeTrack))).sort((first, second) =>
       (second.start || '').localeCompare(first.start || '') || (second.end || '').localeCompare(first.end || '')) : [];
   const message = $('#hike-feed-message');
   message.hidden = posts.length > 0;
-  message.textContent = !account ? 'Google 계정으로 로그인하면 내 산행 사진을 볼 수 있어요.' :
-    !cloudReady ? $('#sync-status').textContent : '완료한 산행이나 백패킹 일정에 사진을 저장하면 여기에 나타나요.';
+  message.textContent = !account ? 'Google 계정으로 로그인하면 내 산행 사진과 경로를 볼 수 있어요.' :
+    !cloudReady ? $('#sync-status').textContent : '완료한 산행이나 백패킹 일정에 사진이나 GPX 경로를 저장하면 여기에 나타나요.';
   $('#hike-feed-cards').innerHTML = posts.map(record => `
     <button type="button" class="hike-feed-card" data-record="${escape(record.id)}">
-      <img src="${escape(record.hikePhoto)}" alt="" loading="lazy" decoding="async">
+      ${hasHikePhoto(record) ? '<img src="'+escape(record.hikePhoto)+'" alt="" loading="lazy" decoding="async">' : ''}
       <span class="hike-feed-card-body">
         <strong>${escape(record.name)}</strong>
         <span>${escape(scheduleDate(record, true))}${record.actualTime ? ' · '+escape(record.actualTime) : ''}</span>
         ${isCompletedCertification(record) ? '<span class="schedule-status status-certified">인증 완료</span>' : ''}
       </span>
+      ${hikeTrackPreview(record.hikeTrack)}
     </button>`).join('');
 }
 
@@ -317,6 +550,19 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
     renderHikePhoto();
     updateMapLink();
   }
+  if ($('#hike-track')) {
+    hikeRequest++;
+    positionRequest++;
+    hikeLoading = locatingHike = false;
+    hikeTrack = hikeHasTrack(record.hikeTrack) ? record.hikeTrack : null;
+    hikePins = Object.fromEntries(Object.keys(hikePinLabels)
+      .filter(id => validHikePoint(record.hikePins?.[id])).map(id => [id, record.hikePins[id]]));
+    $('#hike-track').value = '';
+    $('#hike-location').open = false;
+    $('#hike-pin-status').textContent = '';
+    renderHikePins();
+    renderHikeTrack();
+  }
   field('category').value = categoryOf(record);
   field('certificationType').value = record.id ? certificationTypeOf(record) : $('#certification-filter').value || 'island';
   field('end').setCustomValidity('');
@@ -343,6 +589,7 @@ function renderCategory() {
     section.hidden = !hike;
     for (const input of section.querySelectorAll('input, select, textarea')) input.disabled = !hike;
   }
+  if ($('#hike-location')) $('#hike-location').hidden = !hike || !editing.id;
   const camping = $('#backpacking-fields');
   if (camping) camping.hidden = camping.disabled = field('category').value !== 'backpacking';
   const noticeButton = $('#build-hike-notice');
@@ -430,7 +677,7 @@ function buildHikeNotice() {
     ['📅 일정', record.start && scheduleDate(record, true)],
     ['🗺️ 지역', record.region], ['📍 집결', meetup], ['🔗 지도', mapLink(record.mapUrl)],
     ['🥾 코스', route], ['🧭 코스 유형', record.routeType], ['📏 거리', record.distance && record.distance+'km'],
-    ['⏱️ 예상 소요시간', record.estimatedTime], ['⛰️ 난이도', record.difficulty],
+    ['↗️ 예상 누적 상승', record.plannedAscent && record.plannedAscent+'m'], ['⏱️ 예상 소요시간', record.estimatedTime], ['⛰️ 난이도', record.difficulty],
     ['🙋 벙주', record.host], ['👥 인원', record.people && record.people+'명'],
     ['🚗 교통', record.transport], ['🅿️ 주차', record.parking], ['🚙 차량 회수', record.vehiclePickup],
     ['🏠 숙소', record.lodging], ['💰 예산', record.budget && Number(record.budget).toLocaleString('ko-KR')+'원'],
@@ -508,12 +755,21 @@ async function save(statusOverride) {
   const name = field('name').value.trim();
   field('name').setCustomValidity((hike ? names(name).length : name) ? '' : '일정 이름을 입력해 주세요.');
   if (!form.reportValidity()) return;
+  if (hike && (hikeLoading || locatingHike)) {
+    showEditorError('위치 또는 GPX를 불러오는 중이에요. 잠시 뒤 저장해 주세요.');
+    return;
+  }
   if (photoLoading) {
     showEditorError('사진을 불러오는 중이에요. 잠시 뒤 저장해 주세요.');
     return;
   }
   const record = readScheduleFields();
   if ($('#hike-photo')) record.hikePhoto = hikePhoto;
+  if ($('#hike-track')) Object.assign(record, {hikePins, hikeTrack});
+  else {
+    if (editing.hikePins) record.hikePins = editing.hikePins;
+    if (editing.hikeTrack) record.hikeTrack = editing.hikeTrack;
+  }
   Object.assign(record,{id:editing.id || crypto.randomUUID(),gear,certified:hike ? certificationPoints(record).filter(name => checks.has(name)) : []});
   if (statusOverride) record.status = statusOverride;
   const nextRecords = [...records.filter(item => item.id !== record.id),record];
@@ -644,6 +900,20 @@ $('#current').onclick = () => {
   renderCalendar();
 };
 if ($('#hike-photo')) {
+  if ($('#hike-track')) {
+    $('#hike-pin-list').onclick = handleHikePin;
+    $('#hike-track').onchange = loadHikeTrack;
+    $('#remove-hike-track').onclick = () => {
+      hikeRequest++;
+      hikeLoading = false;
+      hikeTrack = null;
+      renderHikeTrack('GPX 경로를 제거했어요. 일정에서 저장하면 반영돼요.');
+      $('#hike-track').focus();
+    };
+    for (const name of ['distance','estimatedTime','plannedAscent','actualDistance','actualTime','actualAscent']) {
+      field(name).addEventListener('input', refreshHikeComparison);
+    }
+  }
   field('peakNames').oninput = renderPeaks;
   field('mapUrl').oninput = updateMapLink;
   $('#hike-photo').onchange = loadHikePhoto;
