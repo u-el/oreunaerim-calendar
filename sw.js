@@ -3,10 +3,10 @@
 // 오르내림 캘린더 오프라인 지원
 // - 첫 화면(HTML): 네트워크 우선, 신호가 약하면 4초 뒤 저장본으로 열기
 // - 앱 파일(js, css, 이미지): 저장본으로 바로 열고 뒤에서 새 버전 받기
-// - Firebase SDK: 버전이 주소에 들어 있어 저장본 우선
+// - Firebase SDK, Pretendard 글꼴: 버전이 주소에 들어 있어 저장본 우선
 // - 일정 데이터, 로그인, 날씨 요청은 건드리지 않음
 
-const CACHE = 'oreunaerim-offline-v4';
+const CACHE = 'oreunaerim-offline-v5';
 const CORE = [
   './',
   './index.html',
@@ -18,6 +18,7 @@ const CORE = [
   './crew-hike.jpeg'
 ];
 const SDK_HOST = 'www.gstatic.com';
+const FONT_PREFIX = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@';
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
@@ -80,7 +81,7 @@ self.addEventListener('fetch', event => {
   if (url.origin === self.location.origin) {
     if (request.mode === 'navigate') event.respondWith(page(request));
     else if (!url.pathname.endsWith('/sw.js')) event.respondWith(asset(request, event));
-  } else if (url.hostname === SDK_HOST && url.pathname.startsWith('/firebasejs/')) {
+  } else if ((url.hostname === SDK_HOST && url.pathname.startsWith('/firebasejs/')) || request.url.startsWith(FONT_PREFIX)) {
     event.respondWith(sdk(request));
   }
 });
