@@ -6,13 +6,13 @@
 // - Firebase SDK: 버전이 주소에 들어 있어 저장본 우선
 // - 일정 데이터, 로그인, 날씨 요청은 건드리지 않음
 
-const CACHE = 'oreunaerim-offline-v1';
+const CACHE = 'oreunaerim-offline-v2';
 const CORE = [
   './',
   './index.html',
-  './oreunaerim-calendar.webmanifest',
-  './oreunaerim-calendar-192.png',
-  './icon-32.png',
+  './oreunaerim-calendar.webmanifest?v=green',
+  './oreunaerim-calendar-192.png?v=green',
+  './icon-32.png?v=green',
   './forest-hiker-panda.webp',
   './crew-ribbon.jpeg',
   './crew-hike.jpeg'
