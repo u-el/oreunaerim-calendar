@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-planning"><script defer src="app.js?v=hike-planning"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=hike-photo-feed"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -16,6 +16,7 @@
 <button data-menu="hike" aria-pressed="false">산행</button>
 <button data-menu="food" aria-pressed="false">먹벙</button>
 <button data-menu="play" aria-pressed="false">놀이벙</button>
+<button type="button" id="hike-feed-tab" aria-controls="hike-feed" aria-pressed="false" hidden>산행 피드</button>
 </nav>
 <button type="button" id="certification-shortcut" class="certification-shortcut">인증 현황 보기</button>
 <section class="certification-overview" aria-labelledby="certification-heading" id="stats" hidden>
@@ -42,6 +43,11 @@
 <div id="records"></div>
 </section>
 </div>
+<section id="hike-feed" class="hike-feed" aria-labelledby="hike-feed-heading" hidden>
+  <h1 id="hike-feed-heading">내 산행 앨범</h1>
+  <p id="hike-feed-message" class="hike-feed-message" role="status"></p>
+  <div id="hike-feed-cards" class="hike-feed-cards"></div>
+</section>
 <footer><div class="sync-panel" aria-label="계정 동기화">
   <span id="sync-status" role="status">이 브라우저에 저장 중</span>
   <button id="google-login" type="button" hidden>Google로 로그인</button>
