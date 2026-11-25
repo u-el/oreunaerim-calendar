@@ -94,20 +94,151 @@ function isCompletedCertification(record) {
     type !== 'undecided' && Object.hasOwn(certificationTypes, type) && Boolean(record.certified?.length);
 }
 
+const bacProgramLabels = {classic:'명산100', plus:'명산100+', island:'섬&산'};
+const bacKey = value => value.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}+]/gu, '');
+const bacCatalog = Object.entries(JSON.parse($('#bac-catalog')?.textContent || '{}')).flatMap(([type, rows]) =>
+  rows.map(([name, summit, altitude, region]) => {
+    const baseName = name.replace(/\s*\([^)]*\)/g, '');
+    const pointName = summit.replace(/\s*(정상석|인증석)$/, '');
+    const aliases = new Set([name, baseName, baseName + summit, baseName + pointName].map(bacKey));
+    return {id:`${type}:${name}`, type, name, summit, altitude, region, aliases,
+      search:bacKey([name, summit, altitude, region, bacProgramLabels[type], certificationTypes[type]].join(' '))};
+  }));
+const bacById = new Map(bacCatalog.map(place => [place.id, place]));
+let bacLinks = [];
+
+function scheduleBacLinks(links, type, points) {
+  if (!Array.isArray(links)) return [];
+  return links.filter(link => typeof link?.id === 'string' && link.id.startsWith(type+':') && points.includes(link.point));
+}
+
+function bacRegionMatches(place, region) {
+  const normalized = bacKey(region).replace(/(특별시|광역시|특별자치도|도|시|군)$/u, '');
+  return !normalized || bacKey(place.region).includes(normalized);
+}
+
+function legacyBacMatch(type, name, region) {
+  const candidates = bacCatalog.filter(place => place.type === type && place.aliases.has(bacKey(name)));
+  const exact = candidates.find(place => bacKey(name) === bacKey(place.name) && /\(/.test(place.name));
+  if (exact) return exact.id;
+  const matches = candidates.filter(place => bacRegionMatches(place, region));
+  return matches.length === 1 ? matches[0].id : '';
+}
+
+function renderBacLinks() {
+  const list = $('#bac-connected');
+  if (!list) return;
+  const type = field('certificationType').value;
+  const points = certificationPoints({name:field('name').value, peakNames:field('peakNames').value});
+  const links = scheduleBacLinks(bacLinks, type, points);
+  list.innerHTML = links.map(({id, point}) => {
+    const place = bacById.get(id);
+    const label = place ? `${place.name} · ${place.region}` : point;
+    return `<li><span>${escape(label)}</span><button type="button" data-bac-unlink="${escape(id)}" aria-label="${escape(place?.name || point)} 연결 해제">연결 해제</button></li>`;
+  }).join('');
+  list.hidden = !links.length;
+}
+
+function renderBacSearch() {
+  const query = $('#bac-search').value.trim().split(/\s+/).map(bacKey).filter(Boolean);
+  const results = $('#bac-results');
+  const status = $('#bac-status');
+  results.replaceChildren();
+  if (!query.length) {
+    status.textContent = '';
+    return;
+  }
+  const matches = bacCatalog.filter(place => query.every(term => place.search.includes(term)));
+  status.textContent = !matches.length ? '검색 결과가 없어요. 산 이름이나 지역을 확인해 주세요.' :
+    matches.length > 12 ? `${matches.length}곳 중 12곳을 표시해요. 지역이나 봉우리 이름을 더 입력해 보세요.` : `${matches.length}곳을 찾았어요.`;
+  results.innerHTML = matches.slice(0, 12).map(place => `<li><button type="button" data-bac-place="${escape(place.id)}">
+    <strong>${escape(place.name)}</strong><small>${escape([bacProgramLabels[place.type], place.summit, place.altitude, place.region].join(' · '))}</small>
+  </button></li>`).join('');
+}
+
+function selectBacPlace(id) {
+  const place = bacById.get(id);
+  if (!place) return;
+  const type = field('certificationType');
+  const pointsField = field('peakNames');
+  const title = field('name');
+  const existingPoints = certificationPoints({name:title.value, peakNames:pointsField.value});
+  const checkedPoints = existingPoints.filter(point => checks.has(point));
+  if (place.type !== type.value && (checkedPoints.length || scheduleBacLinks(bacLinks, type.value, existingPoints).length)) {
+    $('#bac-status').textContent = '이 일정에는 다른 유형의 인증 기록이 있어요. 같은 유형의 인증지를 선택해 주세요.';
+    return;
+  }
+  const points = pointsField.value.trim() ? existingPoints : checkedPoints;
+  const previous = scheduleBacLinks(bacLinks, place.type, points);
+  const existing = previous.find(link => link.id === id);
+  const available = points.find(point => place.aliases.has(bacKey(point)) && !previous.some(link => link.point === point));
+  const point = existing?.point || available || place.name;
+  const text = [...new Set([...points, point])].join(' · ');
+  if (text.length > pointsField.maxLength) {
+    $('#bac-status').textContent = '한 일정에 연결할 수 있는 인증 포인트 길이를 초과했어요.';
+    return;
+  }
+  if (!title.value.trim()) {
+    title.value = place.name;
+    title.setCustomValidity('');
+  }
+  type.value = place.type;
+  pointsField.value = text;
+  bacLinks = existing ? previous : [...previous, {id, point}];
+  renderPeaks();
+  const search = $('#bac-search');
+  search.value = '';
+  renderBacSearch();
+  $('#bac-status').textContent = `${place.name} 인증지를 연결했어요.`;
+  search.focus();
+}
+
+function initBacPicker() {
+  $('#bac-search').oninput = renderBacSearch;
+  $('#bac-search').onkeydown = event => {
+    if (event.key === 'Enter' && !event.isComposing) event.preventDefault();
+  };
+  $('#bac-results').onclick = event => {
+    const id = event.target.closest('button')?.dataset.bacPlace;
+    if (id) selectBacPlace(id);
+  };
+  $('#bac-connected').onclick = event => {
+    const id = event.target.closest('button')?.dataset.bacUnlink;
+    if (!id) return;
+    bacLinks = bacLinks.filter(link => link.id !== id);
+    renderBacLinks();
+    $('#bac-status').textContent = 'BAC 인증지 연결을 해제했어요. 입력한 인증 포인트는 남겨뒀어요.';
+    $('#bac-search').focus();
+  };
+  field('certificationType').onchange = renderBacLinks;
+}
+
 function countCertifiedPeaks(type) {
   const regionsByPeak = new Map();
+  const linkedIds = new Set();
   for (const record of records) {
     if (!isCompletedCertification(record) || certificationTypeOf(record) !== type) continue;
     const region = (record.region || '').normalize('NFC').trim().replace(/\s+/g, ' ');
+    const links = scheduleBacLinks(record.bacLinks, type, record.certified);
     for (const peak of record.certified) {
+      const linked = links.find(link => link.point === peak);
+      if (linked) {
+        linkedIds.add(linked.id);
+        continue;
+      }
       const name = peak.normalize('NFC').trim();
       if (!name) continue;
       if (!regionsByPeak.has(name)) regionsByPeak.set(name, new Set());
       if (region) regionsByPeak.get(name).add(region);
     }
   }
-  // A record without a region does not establish a distinct peak.
-  return [...regionsByPeak.values()].reduce((count, regions) => count + Math.max(1, regions.size), 0);
+  let count = linkedIds.size;
+  for (const [name, regions] of regionsByPeak) {
+    for (const region of regions.size ? regions : ['']) {
+      if (!linkedIds.size || !linkedIds.has(legacyBacMatch(type, name, region))) count++;
+    }
+  }
+  return count;
 }
 
 function renderCertification() {
@@ -565,6 +696,11 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   }
   field('category').value = categoryOf(record);
   field('certificationType').value = record.id ? certificationTypeOf(record) : $('#certification-filter').value || 'island';
+  bacLinks = Array.isArray(record.bacLinks) ? record.bacLinks : [];
+  if ($('#bac-search')) {
+    $('#bac-search').value = '';
+    renderBacSearch();
+  }
   field('end').setCustomValidity('');
   field('name').setCustomValidity('');
   $('#gear-name').value = '';
@@ -601,6 +737,7 @@ function renderCategory() {
 }
 
 function renderPeaks() {
+  renderBacLinks();
   $('#peaks').innerHTML = certificationPoints({name:field('name').value, peakNames:field('peakNames')?.value}).map(name =>
     `<label class="checkrow"><input type="checkbox" value="${escape(name)}" ${checks.has(name) ? 'checked' : ''}> ${escape(name)} 인증 완료</label>`
   ).join('') || '<p class="hint">산 이름을 입력하면 인증 여부를 체크할 수 있어요.</p>';
@@ -771,6 +908,8 @@ async function save(statusOverride) {
     if (editing.hikeTrack) record.hikeTrack = editing.hikeTrack;
   }
   Object.assign(record,{id:editing.id || crypto.randomUUID(),gear,certified:hike ? certificationPoints(record).filter(name => checks.has(name)) : []});
+  if (hike && $('#bac-search')) record.bacLinks = scheduleBacLinks(bacLinks, record.certificationType, certificationPoints(record));
+  else if (editing.bacLinks) record.bacLinks = editing.bacLinks;
   if (statusOverride) record.status = statusOverride;
   const nextRecords = [...records.filter(item => item.id !== record.id),record];
   const uid = account?.uid;
@@ -937,6 +1076,7 @@ if ($('#hike-photo')) {
     }
   };
 }
+if ($('#bac-search')) initBacPicker();
 field('name').oninput = () => {field('name').setCustomValidity('');renderPeaks();};
 field('start').oninput = field('end').oninput = () => field('end').setCustomValidity('');
 $('#peaks').onchange = ({target}) => {
