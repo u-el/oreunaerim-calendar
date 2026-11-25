@@ -418,6 +418,7 @@ const sharedFields = {
 };
 let sharedSchedule;
 let shareMode = '';
+let sharedFrom = '';
 
 function cleanSharedSchedule(input) {
   if (!input || typeof input !== 'object' || !Object.hasOwn(categories, input.category)) return null;
@@ -445,8 +446,8 @@ function cleanSharedSchedule(input) {
   return record;
 }
 
-function encodeScheduleShare(record, id) {
-  return encodeURIComponent(JSON.stringify({v:1, id, record}));
+function encodeScheduleShare(record, id, from) {
+  return encodeURIComponent(JSON.stringify(from ? {v:1, id, record, from} : {v:1, id, record}));
 }
 
 function decodeScheduleShare(hash) {
@@ -455,6 +456,7 @@ function decodeScheduleShare(hash) {
     const data = JSON.parse(decodeURIComponent(hash.slice(sharePrefix.length)));
     if (data.v !== 1 || typeof data.id !== 'string' || !/^[a-f0-9-]{36}$/.test(data.id)) return null;
     const record = cleanSharedSchedule(data.record);
+    sharedFrom = typeof data.from === 'string' ? data.from.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 20) : '';
     return record ? {...blank(), ...record, id:'shared-'+data.id, status:'planned'} : null;
   } catch {
     return null;
@@ -465,8 +467,11 @@ function showScheduleShare(mode, record) {
   const share = $('#schedule-share-dialog');
   shareMode = mode;
   sharedSchedule = record;
-  $('#schedule-share-title').textContent = mode === 'send' ? '일정 공유하기' : '공유 일정';
-  $('#schedule-share-note').textContent = mode === 'send' ? '저장된 일정의 아래 내용이 공유돼요. 링크를 받은 사람은 누구나 볼 수 있어요.' : '공유 당시 일정이에요. 담으면 내 캘린더에 예정 일정으로 저장돼요.';
+  const from = mode === 'send' ? (account ? nickname : '') : sharedFrom;
+  $('#schedule-share-title').textContent = mode === 'send' ? '일정 공유하기' : from ? `${from}님이 공유한 일정` : '공유 일정';
+  $('#schedule-share-note').textContent = mode === 'send'
+    ? '저장된 일정의 아래 내용이 공유돼요. 링크를 받은 사람은 누구나 볼 수 있어요.' + (from ? ` 보낸 사람으로 내 닉네임(${from})이 함께 보여요.` : '')
+    : '공유 당시 일정이에요. 담으면 내 캘린더에 예정 일정으로 저장돼요.';
   $('#schedule-share-copy').hidden = mode !== 'send';
   $('#schedule-share-save').hidden = mode !== 'receive';
   $('#schedule-share-url-row').hidden = true;
@@ -598,7 +603,7 @@ function initScheduleShare() {
     const output = $('#schedule-share-url');
     const status = $('#schedule-share-status');
     if (!output.value) {
-      const packed = encodeScheduleShare(sharedSchedule, crypto.randomUUID());
+      const packed = encodeScheduleShare(sharedSchedule, crypto.randomUUID(), account ? nickname : '');
       if (packed.length > 6400) {
         status.textContent = '공유 링크가 너무 길어요. 일정의 코스나 준비물 내용을 줄이고 다시 저장해 주세요.';
         return;

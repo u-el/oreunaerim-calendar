@@ -166,6 +166,22 @@ async function run(browser, base, width) {
   await page.click('#nickname-form button[type=submit]');
   check(`${label} 로그인: 닉네임 표시`, (await page.textContent('#nickname-edit')) === '점검용님');
 
+  // 공유: 보내는 링크에 닉네임, 받는 쪽 제목에 표시
+  const sent = await page.evaluate(async () => {
+    showScheduleShare('send', cleanSharedSchedule({id: 'x', name: '북한산', start: '2030-01-01', end: '2030-01-01', category: 'club-hike', gear: []}));
+    const note = document.querySelector('#schedule-share-note').textContent;
+    document.querySelector('#schedule-share-copy').click();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const url = document.querySelector('#schedule-share-url').value;
+    document.querySelector('#schedule-share-dialog').close();
+    showScheduleShare('receive', decodeScheduleShare(url.slice(url.indexOf('#'))));
+    const title = document.querySelector('#schedule-share-title').textContent;
+    document.querySelector('#schedule-share-dialog').close();
+    return {note, title};
+  });
+  check(`${label} 공유: 보내는 창에 닉네임 안내`, sent.note.includes('점검용'), sent.note);
+  check(`${label} 공유: 받는 쪽 제목에 닉네임`, sent.title === '점검용님이 공유한 일정', sent.title);
+
   // 어두운 화면
   await page.evaluate(() => changeAccount(null));
   await page.click('#color-toggle');
