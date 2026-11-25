@@ -1022,7 +1022,7 @@ function updateMapLink() {
 function renderHikePhoto(message = '') {
   const gallery = $('#hike-photo-gallery');
   gallery.innerHTML = hikePhotos.map((photo, index) =>
-    `<figure><img src="${escape(photo)}" alt="산행 사진 ${index+1}" loading="lazy" decoding="async"><figcaption><button type="button" data-remove-photo="${index}" aria-label="사진 ${index+1} 제거" ${photoLoading ? 'disabled' : ''}>제거</button></figcaption></figure>`).join('');
+    `<figure><button type="button" class="album-preview" data-preview-photo="${index}" aria-label="사진 ${index+1} 크게 보기"><img src="${escape(photo)}" alt="" loading="lazy" decoding="async"></button><figcaption><button type="button" data-cover-photo="${index}" ${index === 0 || photoLoading ? 'disabled' : ''}>${index === 0 ? '대표 사진' : '대표로 설정'}</button><button type="button" data-remove-photo="${index}" aria-label="사진 ${index+1} 제거" ${photoLoading ? 'disabled' : ''}>제거</button></figcaption></figure>`).join('');
   gallery.hidden = !hikePhotos.length;
   $('#hike-photo-count').textContent = `${hikePhotos.length} / ${hikePhotoLimit}장`;
   $('#hike-photo').disabled = !isHike(field('category').value) || photoLoading || hikePhotos.length >= hikePhotoLimit;
@@ -1089,6 +1089,19 @@ function initHikePhotos() {
   input.multiple = true;
   input.onchange = loadHikePhoto;
   $('#hike-photo-gallery').onclick = event => {
+    const preview = event.target.closest('[data-preview-photo]');
+    if (preview) {
+      openPhotoAlbum([...hikePhotos], field('name').value, Number(preview.dataset.previewPhoto));
+      return;
+    }
+    const cover = event.target.closest('[data-cover-photo]');
+    if (cover && !photoLoading) {
+      const [photo] = hikePhotos.splice(Number(cover.dataset.coverPhoto), 1);
+      hikePhotos.unshift(photo);
+      renderHikePhoto('대표 사진을 골랐어요. 일정을 저장하면 반영돼요.');
+      $('#hike-photo-gallery [data-preview-photo="0"]').focus();
+      return;
+    }
     const button = event.target.closest('[data-remove-photo]');
     if (!button || photoLoading) return;
     const index = Number(button.dataset.removePhoto);
@@ -1329,6 +1342,12 @@ $('.tabs').onclick = event => {
   document.querySelector(`[data-view="${view}"]`).focus();
 };
 document.addEventListener('click',event => {
+  const album = event.target.closest('[data-album-record]');
+  if (album) {
+    const record = records.find(item => item.id === album.dataset.albumRecord);
+    if (record) openPhotoAlbum(savedHikePhotos(record), record.name);
+    return;
+  }
   if (event.target.closest('[data-add-schedule]')) {
     openEditor();
     return;
