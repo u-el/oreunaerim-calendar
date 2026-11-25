@@ -836,3 +836,14 @@ html[data-color=dark] .past-planned{background:#2a2617;border-color:#4a4127}
 html[data-color=dark] .past-planned li{border-color:#4a4127}
 html[data-color=dark] .past-planned-head button{background:#3f7a5b}
 #schedule-share-dialog>#schedule-share-copy:not(.primary){width:100%;min-height:46px}
+
+/* 이미 담은 공유 일정의 바뀐 내용 */
+.share-diff{padding:12px 14px;border:1px solid #ead9a8;border-radius:12px;background:#fff8e6;font-size:.86rem}
+.share-diff strong{display:block;margin-bottom:6px;color:var(--ink)}
+.share-diff ul{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.share-diff li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.share-diff span{min-width:5.5rem;color:var(--dim)}
+.share-diff del{color:var(--dim)}
+.share-diff b{color:var(--ink)}
+.share-diff b::before{content:"→ ";font-weight:400;color:var(--dim)}
+html[data-color=dark] .share-diff{background:#2a2617;border-color:#4a4127}

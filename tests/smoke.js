@@ -175,6 +175,7 @@ async function run(browser, base, width) {
       shares: {}, failShare: false,
       async createShare(uid, payload) { if (this.failShare) throw new Error('permission-denied'); const id = 'Ab3' + Math.random().toString(36).slice(2, 9).padEnd(7, 'x'); this.shares[id] = payload; return id; },
       async getShare(id) { return this.shares[id] || null; },
+      async saveSchedule(uid, record) { this.saved = record; },
     };
     try { localStorage.clear(); } catch {}
     changeAccount({uid: 'smoke', email: 'smoke@example.com'});
@@ -216,6 +217,33 @@ async function run(browser, base, width) {
   });
   check(`${label} 공유: 카톡 등으로 보내기 버튼`, shared.visible);
   check(`${label} 공유: 보내는 메시지에 닉네임·일정·짧은 링크`, shared.args?.text?.startsWith('점검용님이 일정을 공유했어요') && shared.args.text.includes('팔봉산') && /#s=[A-Za-z0-9]{10}$/.test(shared.args.url || ''), JSON.stringify(shared.args));
+  // 같은 일정을 다시 공유하면 받은 쪽은 업데이트
+  const update = await page.evaluate(async () => {
+    const source = '11111111-2222-4333-8444-555555555555';
+    const base = {name: '팔봉산', start: '2030-12-05', end: '2030-12-06', category: 'club-hike', meetingTime: '08:30', gear: [{label: '물'}, {label: '아이젠'}]};
+    const first = await buildShareLink(cleanSharedSchedule(base), source);
+    const second = await buildShareLink(cleanSharedSchedule({...base, meetingTime: '08:00'}), source);
+    const idOf = link => sync.shares[link.slice(link.indexOf('#s=') + 3)].id;
+    const sameId = idOf(first) === idOf(second);
+    records = [{...blank(), ...cleanSharedSchedule(base), id: 'shared-' + source, status: 'done', certified: ['팔봉산'],
+      gear: [{label: '물', checked: true}, {label: '아이젠', checked: false}]}];
+    cloudReady = true;
+    showScheduleShare('receive', sharedScheduleFrom(sync.shares[second.slice(second.indexOf('#s=') + 3)]));
+    const button = document.querySelector('#schedule-share-save');
+    const before = {text: button.textContent, disabled: button.disabled, diff: document.querySelector('#schedule-share-diff').textContent};
+    button.click();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const saved = sync.saved;
+    showScheduleShare('receive', sharedScheduleFrom(sync.shares[second.slice(second.indexOf('#s=') + 3)]));
+    const after = {text: button.textContent, disabled: button.disabled};
+    document.querySelector('#schedule-share-dialog').close();
+    records = [];
+    return {sameId, before, saved: saved && {time: saved.meetingTime, status: saved.status, certified: saved.certified, gear: saved.gear}, after};
+  });
+  check(`${label} 공유: 같은 일정은 다시 공유해도 같은 번호`, update.sameId);
+  check(`${label} 공유: 이미 담은 일정이면 업데이트 버튼과 바뀐 내용`, update.before.text === '바뀐 내용으로 업데이트' && !update.before.disabled && update.before.diff.includes('집결 시간') && update.before.diff.includes('08:00'), JSON.stringify(update.before));
+  check(`${label} 공유: 업데이트해도 내 완료·인증·준비물 체크 유지`, update.saved?.time === '08:00' && update.saved.status === 'done' && update.saved.certified[0] === '팔봉산' && update.saved.gear[0].checked === true, JSON.stringify(update.saved));
+  check(`${label} 공유: 최신이면 버튼 비활성`, update.after.text === '이미 담은 최신 일정이에요' && update.after.disabled, JSON.stringify(update.after));
   const short = await makeLink();
   check(`${label} 공유: 로그인하면 짧은 링크`, /#s=[A-Za-z0-9]{10}$/.test(short.url), short.url.slice(-30));
   check(`${label} 공유: 보내는 창에 닉네임 안내`, short.note.includes('점검용'), short.note);

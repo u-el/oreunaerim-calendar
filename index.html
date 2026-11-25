@@ -8,7 +8,7 @@
 <meta property="og:url" content="https://u-el.github.io/oreunaerim-calendar/"><meta property="og:image" content="https://u-el.github.io/oreunaerim-calendar/og-image.jpg">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="오르내림 캘린더 - 배낭을 멘 레서판다">
 <meta name="twitter:card" content="summary_large_image">
-<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=past-share"><script defer src="app.js?v=past-share"></script>
+<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=share-update"><script defer src="app.js?v=share-update"></script>
 <script>try{var c=localStorage.getItem('oreunaerim:color-scheme');document.documentElement.dataset.color=(c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="오르내림">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=night">
@@ -683,6 +683,7 @@
   <header class="share-head"><h2 id="schedule-share-title">공유 일정</h2><button type="button" id="schedule-share-close" aria-label="닫기">×</button></header>
   <p class="hint" id="schedule-share-note"></p>
   <div id="schedule-share-data"></div>
+  <div id="schedule-share-diff" class="share-diff" hidden></div>
   <p id="schedule-share-status" role="status"></p>
   <div class="login-browser-help" id="share-login-help" data-login-help hidden><p role="status"></p><a class="primary external-open" hidden>Safari로 열기</a><button type="button" class="primary">공유 일정 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
   <button type="button" class="primary" id="schedule-share-send" hidden>카톡 등으로 보내기</button>

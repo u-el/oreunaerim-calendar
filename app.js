@@ -437,6 +437,7 @@ let sharedSchedule;
 let shareMode = '';
 let sharedFrom = '';
 let shareLink = null;
+let shareSourceId = '';
 
 function cleanSharedSchedule(input) {
   if (!input || typeof input !== 'object' || !Object.hasOwn(categories, input.category)) return null;
@@ -489,10 +490,12 @@ function sharedScheduleFrom(data) {
 }
 
 // 공유 링크 만들기: 로그인해 있으면 짧은 링크, 안 되면 내용을 담은 긴 링크
-async function buildShareLink(record) {
+async function buildShareLink(record, sourceId = '') {
   const base = new URL('.', location.href).href;
   const from = account ? nickname : '';
-  const id = crypto.randomUUID();
+  // 같은 일정은 몇 번을 다시 공유해도 같은 번호 → 받은 사람 쪽에서 새로 담지 않고 업데이트
+  const stable = String(sourceId).replace(/^shared-/, '');
+  const id = /^[a-f0-9-]{36}$/.test(stable) ? stable : crypto.randomUUID();
   if (account && sync?.createShare && navigator.onLine) {
     try {
       const short = await sync.createShare(account.uid, {v:1, id, record, from});
@@ -502,6 +505,28 @@ async function buildShareLink(record) {
   const packed = encodeScheduleShare(record, id, from);
   if (packed.length > 6400) throw new Error('too-long');
   return base + shortSharePrefix + packed;
+}
+
+// 이미 담은 일정과 새로 받은 공유 내용 비교
+function shareChanges(current, incoming) {
+  const before = cleanSharedSchedule(current) || {};
+  const show = (key, value) => !value ? '' : key === 'category' ? categories[value] : key === 'certificationType' ? certificationTypes[value] : value;
+  const changes = Object.entries(sharedFields).filter(([key]) => (before[key] || '') !== (incoming[key] || ''))
+    .map(([key, label]) => ({label, before:show(key, before[key]), after:show(key, incoming[key])}));
+  const gear = record => (record.gear || []).map(item => item.label).join(', ');
+  if (gear(before) !== gear(incoming)) changes.push({label:'준비물', before:gear(before), after:gear(incoming)});
+  return changes;
+}
+
+function mergeSharedUpdate(current, incoming) {
+  const updated = {...current};
+  for (const key of Object.keys(sharedFields)) {
+    if (incoming[key]) updated[key] = incoming[key];
+    else delete updated[key];
+  }
+  const checked = new Set((current.gear || []).filter(item => item.checked).map(item => item.label));
+  updated.gear = (incoming.gear || []).map(item => ({label:item.label, checked:checked.has(item.label)}));
+  return updated;
 }
 
 // 공유 창: 받는 사람이 보게 될 일정 카드
@@ -536,7 +561,8 @@ function showScheduleShare(mode, record) {
   $('#schedule-share-send').hidden = mode !== 'send' || typeof navigator.share !== 'function';
   $('#schedule-share-copy').classList.toggle('primary', $('#schedule-share-send').hidden);
   // 보내기·복사를 누르는 즉시 쓸 수 있게 링크를 미리 만들어 둠 (아이폰은 누른 직후에만 공유·복사 허용)
-  shareLink = mode === 'send' && record ? buildShareLink(record) : null;
+  shareLink = mode === 'send' && record ? buildShareLink(record, shareSourceId) : null;
+  if (mode !== 'send') shareSourceId = '';
   shareLink?.then(link => { if (sharedSchedule === record) $('#schedule-share-url').value = link; }, () => {});
   $('#schedule-share-save').hidden = mode !== 'receive';
   $('#schedule-share-url-row').hidden = true;
@@ -552,9 +578,21 @@ function showScheduleShare(mode, record) {
 function updateScheduleShare() {
   if (shareMode !== 'receive') return;
   const button = $('#schedule-share-save');
-  const existing = account && records.some(item => item.id === sharedSchedule?.id);
-  button.textContent = existing ? '이미 담은 일정이에요' : account ? '내 캘린더에 담기' : 'Google 로그인하고 담기';
-  button.disabled = !sharedSchedule || pendingOperation || !!existing || (account ? !cloudReady : !sync);
+  const existing = account && sharedSchedule && records.find(item => item.id === sharedSchedule.id);
+  const own = account && sharedSchedule && records.some(item => item.id === sharedSchedule.id.replace(/^shared-/, ''));
+  const changes = existing ? shareChanges(existing, sharedSchedule) : [];
+  button.textContent = own ? '내가 만든 일정이에요' : existing ? (changes.length ? '바뀐 내용으로 업데이트' : '이미 담은 최신 일정이에요')
+    : account ? '내 캘린더에 담기' : 'Google 로그인하고 담기';
+  button.disabled = !sharedSchedule || pendingOperation || own || Boolean(existing && !changes.length) || (account ? !cloudReady : !sync);
+  $('#schedule-share-note').textContent = own ? '내가 공유한 일정이에요. 내 캘린더에 이미 있어요.'
+    : existing ? (changes.length ? '이미 담은 일정이에요. 업데이트하면 공유된 항목만 바뀌고 내 완료·인증·사진·준비물 체크는 그대로예요.' : '이미 담은 일정이에요. 바뀐 내용이 없어요.')
+    : '공유 당시 일정이에요. 담으면 내 캘린더에 예정 일정으로 저장돼요.';
+  const diff = $('#schedule-share-diff');
+  if (diff) {
+    diff.hidden = !changes.length;
+    diff.innerHTML = changes.length ? `<strong>이미 담은 일정에서 바뀐 내용</strong><ul>${changes.map(({label, before, after}) =>
+      `<li><span>${escape(label)}</span><del>${escape(before || '없음')}</del><b>${escape(after || '없음')}</b></li>`).join('')}</ul>` : '';
+  }
   const browserHandoff = Boolean(sharedSchedule && !account && isInAppLoginBrowser() && loginBrowserHelp(true));
   button.hidden = browserHandoff;
   if (browserHandoff && loginBrowserHelp(true).hidden) {
@@ -663,6 +701,7 @@ function initScheduleShare() {
   $('#share-schedule').onclick = () => {
     const saved = records.find(record => record.id === editing.id);
     const record = cleanSharedSchedule(saved);
+    shareSourceId = saved?.id || '';
     if (record) showScheduleShare('send', record);
     else feedback('공유하려면 일정 이름과 날짜를 확인하고 저장해 주세요.');
   };
@@ -681,7 +720,7 @@ function initScheduleShare() {
     const button = $('#schedule-share-copy');
     if (button.disabled) return;
     const ready = Boolean(output.value);
-    const link = ready ? Promise.resolve(output.value) : shareLink || buildShareLink(sharedSchedule);
+    const link = ready ? Promise.resolve(output.value) : shareLink || buildShareLink(sharedSchedule, shareSourceId);
     if (!ready) {
       button.disabled = true;
       status.textContent = '공유 링크를 만드는 중…';
@@ -714,7 +753,7 @@ function initScheduleShare() {
     let link = $('#schedule-share-url').value;
     if (!link) {
       status.textContent = '공유 링크를 만드는 중…';
-      try { link = await (shareLink || buildShareLink(record)); } catch {
+      try { link = await (shareLink || buildShareLink(record, shareSourceId)); } catch {
         status.textContent = '공유 링크가 너무 길어요. 일정의 코스나 준비물 내용을 줄이고 다시 저장해 주세요.';
         return;
       }
@@ -743,6 +782,25 @@ function initScheduleShare() {
     if (!cloudReady) return;
     const uid = account.uid;
     const record = sharedSchedule;
+    const existing = records.find(item => item.id === record.id);
+    if (existing) {
+      // 이미 담은 일정: 공유된 항목만 바꾸고 내 완료·인증·사진·준비물 체크는 그대로
+      const updated = mergeSharedUpdate(existing, record);
+      setSyncBusy(true);
+      try {
+        await sync.saveSchedule(uid, updated);
+        if (account?.uid !== uid || record !== sharedSchedule) return;
+        records = records.map(item => item.id === updated.id ? updated : item);
+        render();
+        share.close();
+        feedback('바뀐 내용으로 일정을 업데이트했어요.');
+      } catch {
+        status.textContent = '업데이트하지 못했어요. 연결 상태를 확인한 뒤 다시 시도해 주세요.';
+      } finally {
+        setSyncBusy(false);
+      }
+      return;
+    }
     setSyncBusy(true);
     try {
       const added = await sync.addSharedSchedule(uid, record);
