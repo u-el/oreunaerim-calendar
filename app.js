@@ -759,6 +759,52 @@ function renderHikeSearch() {
   results.innerHTML = found.map(record => scheduleCard(record, record.status)).join('');
 }
 
+function albumCover(record, photos) {
+  if (!photos.length) return '';
+  return '<button type="button" class="album-cover" data-album-record="'+escape(record.id)+'" aria-label="'+escape(record.name)+' 사진 '+photos.length+'장 보기">'+
+    '<img src="'+photos[0]+'" alt="" loading="lazy" decoding="async"><span>사진 '+photos.length+'장</span></button>';
+}
+
+function openPhotoAlbum(photos, title, initial = 0) {
+  const viewer = $('#photo-album');
+  if (!photos.length || !viewer) return;
+  let index = initial;
+  let touchStart;
+  const image = $('#photo-album-image');
+  const previous = $('#photo-album-prev');
+  const next = $('#photo-album-next');
+  const show = () => {
+    image.src = photos[index];
+    image.alt = '산행 사진 '+(index+1);
+    $('#photo-album-count').textContent = (index+1)+' / '+photos.length;
+  };
+  const move = offset => {
+    index = (index + offset + photos.length) % photos.length;
+    show();
+  };
+  $('#photo-album-title').textContent = title || '산행 사진';
+  previous.hidden = next.hidden = photos.length < 2;
+  previous.onclick = () => move(-1);
+  next.onclick = () => move(1);
+  viewer.onkeydown = event => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      move(event.key === 'ArrowLeft' ? -1 : 1);
+    }
+  };
+  image.ontouchstart = event => { touchStart = event.touches[0].clientX; };
+  image.ontouchend = event => {
+    const delta = event.changedTouches[0].clientX - touchStart;
+    if (Math.abs(delta) > 40) move(delta < 0 ? 1 : -1);
+    touchStart = undefined;
+  };
+  image.ontouchcancel = () => { touchStart = undefined; };
+  $('#photo-album-close').onclick = () => viewer.close();
+  viewer.onclose = () => image.removeAttribute('src');
+  show();
+  viewer.showModal();
+}
+
 function renderHikeFeed() {
   const posts = account && cloudReady ? records.filter(record => record.status === 'done' &&
     isHike(categoryOf(record)) && (savedHikePhotos(record).length || hikeHasTrack(record.hikeTrack))).sort((first, second) =>
@@ -769,17 +815,17 @@ function renderHikeFeed() {
     !cloudReady ? $('#sync-status').textContent : '완료한 산행이나 백패킹 일정에 사진이나 GPX 경로를 저장하면 여기에 나타나요.';
   $('#hike-feed-cards').innerHTML = posts.map(record => {
     const photos = savedHikePhotos(record);
-    return `
+    return `<div class="album-card">${albumCover(record, photos)}
     <button type="button" class="hike-feed-card" data-record="${escape(record.id)}">
-      ${photos.length ? '<img src="'+escape(photos[0])+'" alt="" loading="lazy" decoding="async">' : ''}
+
       <span class="hike-feed-card-body">
         <strong>${escape(record.name)}</strong>
-        ${photos.length > 1 ? '<span>사진 '+photos.length+'장</span>' : ''}
+
         <span>${escape(scheduleDate(record, true))}${record.actualTime ? ' · '+escape(record.actualTime) : ''}</span>
         ${isCompletedCertification(record) ? '<span class="schedule-status status-certified">인증 완료</span>' : ''}
       </span>
       ${hikeTrackPreview(record.hikeTrack)}
-    </button>`;
+    </button></div>`;
   }).join('');
 }
 
@@ -804,7 +850,7 @@ function scheduleCard(record, displayView) {
     .filter(line => /^(집결(?:\s*(?:장소|시간))?|출발\s*(?:장소|시간))\s*[:：]/.test(line));
   const meetup = [record.meetingTime, record.meetingPlace].filter(Boolean).join(' ');
   const details = [...(meetup && isHike(category) ? ['집결 '+meetup] : meeting), record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명', record.transport, record.overnight !== '숙박 없음' && record.lodging, gear.length && '준비물 '+gear.filter(item => item.checked).length+'/'+gear.length].filter(Boolean);
-  return `<button class="schedule-card card kind-${kind}" type="button" data-record="${escape(record.id)}">
+  const card = `<button class="schedule-card card kind-${kind}" type="button" data-record="${escape(record.id)}">
     <span class="schedule-date">${escape(scheduleDate(record, displayView !== 'month'))}</span>
     <span class="schedule-card-body">
       <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong><span class="schedule-status status-${status}">${statusLabel}</span></span>
@@ -813,6 +859,8 @@ function scheduleCard(record, displayView) {
       ${details.length ? '<span class="meta">'+escape(details.join(' · '))+'</span>' : ''}
     </span>
   </button>`;
+  const photos = record.status === 'done' && isHike(category) ? savedHikePhotos(record) : [];
+  return photos.length ? `<div class="album-card">${albumCover(record, photos)}${card}</div>` : card;
 }
 
 function renderUpcoming(categories) {
