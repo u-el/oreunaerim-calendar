@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=schedule-deletion"><script defer src="app.js?v=monthly-dates"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-planning"><script defer src="app.js?v=hike-planning"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -65,7 +65,43 @@
 <label>교통수단<select name="transport"><option value="">미정</option><option>자차</option><option>카풀</option><option>대중교통</option><option>버스</option><option>기차</option></select></label>
 <label>일정 상태<select name="status"><option value="planned">예정</option><option value="done">완료</option></select></label>
 </div>
-<fieldset id="certification"><legend>인증 기록</legend><p class="hint">산 이름을 가운데점(·)으로 나누어 여러 산을 기록할 수 있어요.</p><div id="peaks"></div></fieldset>
+<details class="editor-section" id="hike-planning" hidden>
+<summary>산행 코스와 집결</summary><div class="details-content">
+<fieldset id="hike-fields"><legend>산행 코스</legend><div class="form-grid">
+<label>들머리<input name="trailhead" maxlength="150"></label>
+<label>경유지<input name="waypoints" maxlength="240"></label>
+<label>정상<input name="summit" maxlength="150"></label>
+<label>날머리<input name="trailEnd" maxlength="150"></label>
+<label>코스 유형<select name="routeType"><option value="">미정</option><option>왕복</option><option>원점회귀</option><option>종주</option><option>편도</option></select></label>
+<label>거리 (km)<input type="number" name="distance" min="0.1" step="0.1"></label>
+<label>예상 소요시간<input name="estimatedTime" placeholder="예) 3시간 30분" maxlength="80"></label>
+<label>난이도<select name="difficulty"><option value="">미정</option><option>하</option><option>중</option><option>상</option></select></label>
+</div></fieldset>
+<fieldset><legend>집결·이동</legend><div class="form-grid">
+<label>집결 시간<input type="time" name="meetingTime"></label>
+<label>집결 장소<input name="meetingPlace" maxlength="150"></label>
+<label class="full-width-field">지도 링크<input type="url" name="mapUrl" placeholder="https://" maxlength="2000"></label>
+<a id="open-map" href="" target="_blank" rel="noopener noreferrer" hidden>지도 열기</a>
+<label>주차장<input name="parking" maxlength="150"></label>
+<label class="full-width-field">하산 후 차량 회수<input name="vehiclePickup" maxlength="240"></label>
+</div></fieldset>
+<fieldset id="backpacking-fields" hidden disabled><legend>백패킹</legend><div class="form-grid">
+<label>야영지<input name="campsite" maxlength="150"></label>
+<label>예약 여부<select name="campBooking"><option value="">미정</option><option>예약 완료</option><option>예약 필요</option><option>예약 불필요</option></select></label>
+<label class="full-width-field">물 보급 위치<input name="waterSource" maxlength="150"></label>
+</div></fieldset>
+</div></details>
+<details class="editor-section" id="hike-log" hidden>
+<summary>산행 기록</summary><div class="details-content">
+<label>실제 소요시간<input name="actualTime" placeholder="예) 4시간 10분" maxlength="80"></label>
+<label>실제로 걸은 코스<textarea name="actualRoute" rows="2" maxlength="2000"></textarea></label>
+<label>다음 산행 참고 메모<textarea name="hikeNotes" rows="2" maxlength="2000"></textarea></label>
+<label>산행 사진 1장<input type="file" id="hike-photo" accept="image/*"></label>
+<p role="status" id="hike-photo-status" class="hint"></p>
+<img id="hike-photo-preview" alt="첨부한 산행 사진" hidden>
+<button type="button" id="remove-hike-photo" hidden>첨부 사진 제거</button>
+</div></details>
+<fieldset id="certification"><legend>인증 기록</legend><label>인증 포인트<input name="peakNames" placeholder="예) 월영산 · 선유봉" maxlength="600"></label><p class="hint">포인트 여러 개는 가운데점(·)으로 구분해요. 비워두면 산 이름을 사용해요.</p><div id="peaks"></div></fieldset>
 <details id="schedule-details"><summary>세부 정보</summary>
 <div class="details-content">
 <div class="form-grid">
@@ -76,6 +112,8 @@
 <fieldset><legend>준비물 체크</legend><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div></fieldset>
 <label>메모<textarea name="memo" rows="2" placeholder="이동 시간, 코스, 식사 등"></textarea></label>
 <label>공지사항 초안<textarea name="notice" rows="5" placeholder="집결 장소, 출발 시간, 코스, 준비물 등을 적어두세요."></textarea></label>
+<button type="button" id="build-hike-notice" hidden>산행 정보로 공지 미리보기</button>
+<div id="hike-notice-preview" hidden><label>벙 공지 미리보기<textarea id="hike-notice-text" rows="8" readonly></textarea></label><button type="button" id="copy-hike-notice">공지 복사</button><p id="hike-notice-status" role="status" class="hint"></p></div>
 </div>
 </details>
 </div>
