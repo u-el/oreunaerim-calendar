@@ -427,18 +427,23 @@ function buildHikeNotice() {
   const route = [record.trailhead, record.waypoints, record.summit, record.trailEnd].filter(Boolean).join(' → ');
   const meetup = [record.meetingTime, record.meetingPlace].filter(Boolean).join(' · ');
   const lines = [
-    ['일정', record.start && scheduleDate(record, true)],
-    ['지역', record.region], ['집결', meetup], ['지도', mapLink(record.mapUrl)],
-    ['코스', route], ['거리·시간·난이도', hikingMetrics(record)],
-    ['벙주', record.host], ['인원', record.people && record.people+'명'],
-    ['교통', record.transport], ['주차', record.parking], ['차량 회수', record.vehiclePickup],
-    ['숙소', record.lodging], ['예산', record.budget && Number(record.budget).toLocaleString('ko-KR')+'원'],
-    ['인증', [certificationTypes[record.certificationType], certificationPoints(record).join(' · ')].filter(Boolean).join(' · ')],
-    ['준비물', gear.map(item => item.label).filter(Boolean).join(', ')]
+    ['📅 일정', record.start && scheduleDate(record, true)],
+    ['🗺️ 지역', record.region], ['📍 집결', meetup], ['🔗 지도', mapLink(record.mapUrl)],
+    ['🥾 코스', route], ['🧭 코스 유형', record.routeType], ['📏 거리', record.distance && record.distance+'km'],
+    ['⏱️ 예상 소요시간', record.estimatedTime], ['⛰️ 난이도', record.difficulty],
+    ['🙋 벙주', record.host], ['👥 인원', record.people && record.people+'명'],
+    ['🚗 교통', record.transport], ['🅿️ 주차', record.parking], ['🚙 차량 회수', record.vehiclePickup],
+    ['🏠 숙소', record.lodging], ['💰 예산', record.budget && Number(record.budget).toLocaleString('ko-KR')+'원'],
+    ['🎒 준비물', gear.map(item => item.label).filter(Boolean).join(', ')],
+    ['🏅 인증', [certificationTypes[record.certificationType], certificationPoints(record).join(' · ')].filter(Boolean).join(' · ')]
   ];
-  if (record.category === 'backpacking') lines.push(['야영지', record.campsite], ['예약', record.campBooking], ['물 보급', record.waterSource]);
-  $('#hike-notice-text').value = [record.name ? '['+record.name+'] 산행 안내' : '산행 안내',
-    ...lines.filter(([,value]) => value).map(([label,value]) => label+': '+value), record.notice].filter(Boolean).join('\n');
+  if (record.category === 'backpacking') {
+    lines.push(['⛺ 야영지', record.campsite], ['🗓️ 예약', record.campBooking], ['💧 물 보급', record.waterSource]);
+  }
+  const title = record.name ? '🏔️ '+record.name+' 산행' : '🏔️ 산행 안내';
+  const details = lines.filter(([,value]) => value).map(([label,value]) => label+'　'+value).join('\n');
+  const note = record.notice ? '💬 벙주 한마디\n'+record.notice : '';
+  $('#hike-notice-text').value = [title, details, note].filter(Boolean).join('\n\n');
   $('#hike-notice-preview').hidden = false;
   $('#hike-notice-status').textContent = '';
   $('#hike-notice-text').focus();
