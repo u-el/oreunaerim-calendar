@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=bac-region-matching"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=hike-photos-search"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -51,6 +51,15 @@
 #bac-progress-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #dce6dd; }
 #bac-progress-list li small { display: block; color: #466153; }
 #bac-progress-list button, #bac-progress-more { min-height: 44px; }
+.hike-search { margin: 12px 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.hike-search-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, 25%); gap: 10px; align-items: end; }
+.hike-search-fields label, .hike-search-fields input, .hike-search-fields select { min-width: 0; }
+#hike-search-results { display: grid; gap: 8px; }
+#hike-search-count:empty, #hike-photo-status:empty { display: none; }
+.hike-photo-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 115px), 1fr)); gap: 8px; }
+.hike-photo-gallery figure { margin: 0; min-width: 0; display: grid; align-content: start; gap: 4px; }
+.hike-photo-gallery img { display: block; width: 100%; border-radius: 9px; }
+.hike-photo-gallery button { min-height: 44px; }
 </style>
 <!-- BAC public certification locations, checked 2026-11-25. Cheonseongsan details from the BAC September 12 bus listing. -->
 <script type="application/json" id="bac-catalog">{
@@ -386,6 +395,14 @@
 <button data-menu="play" aria-pressed="false">놀이벙</button>
 <button type="button" id="hike-feed-tab" aria-controls="hike-feed" aria-pressed="false" hidden>산행 피드</button>
 </nav>
+<section id="hike-search" class="hike-search" aria-label="산행 일정 검색" hidden>
+  <div class="hike-search-fields">
+    <label>산행 일정 검색<input type="search" id="hike-search-query" placeholder="산 이름, 지역, 코스" maxlength="120" autocomplete="off"></label>
+    <label>일정 상태<select id="hike-search-status"><option value="">예정·완료 전체</option><option value="planned">예정</option><option value="done">완료</option></select></label>
+  </div>
+  <p id="hike-search-count" class="hint" role="status"></p>
+  <div id="hike-search-results"></div>
+</section>
 <button type="button" id="certification-shortcut" class="certification-shortcut">인증 현황 보기</button>
 <section class="certification-overview" aria-labelledby="certification-heading" id="stats" hidden>
 <h2 tabindex="-1" id="certification-heading">인증 현황</h2>
@@ -525,10 +542,10 @@
 <p class="hint" id="hike-track-status" role="status"></p>
 <button type="button" id="remove-hike-track" hidden>GPX 경로 제거</button>
 </fieldset>
-<label>산행 사진 1장<input type="file" id="hike-photo" accept="image/*"></label>
+<label>산행 사진<input type="file" id="hike-photo" accept="image/*" multiple aria-describedby="hike-photo-count"></label>
+<p class="hint" id="hike-photo-count">0 / 5장</p>
 <p role="status" id="hike-photo-status" class="hint"></p>
-<img id="hike-photo-preview" alt="첨부한 산행 사진" hidden>
-<button type="button" id="remove-hike-photo" hidden>첨부 사진 제거</button>
+<div class="hike-photo-gallery" id="hike-photo-gallery" hidden></div>
 </div></details>
 <details class="editor-section" id="editor-certification" hidden><summary>인증 기록</summary><div class="details-content" id="certification">
 <div id="peaks"></div>
