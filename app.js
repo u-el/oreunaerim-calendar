@@ -1136,6 +1136,8 @@ function renderHikeFeed() {
   message.hidden = !loading;
   message.textContent = loading ? $('#sync-status').textContent : '';
   renderHikeFeedIntro(loading || posts.length ? '' : account ? 'empty' : 'guest');
+  renderHikeRecords(loading);
+  $('#hike-album-heading').hidden = !posts.length || $('#hike-records').hidden;
   $('#hike-feed-cards').innerHTML = posts.map(record => {
     const photos = savedHikePhotos(record);
     const summary = actualHikeSummary(record);
@@ -1153,6 +1155,107 @@ function renderHikeFeed() {
     </button></div>`;
   }).join('');
 }
+
+/* ---- 내 산행 기록 ---- */
+const everestHeight = 8849;
+let recordYear = today.slice(0, 4);
+const recordNumber = value => {
+  const number = parseFloat(String(value ?? '').replace(/,/g, ''));
+  return Number.isFinite(number) && number > 0 ? number : 0;
+};
+function recordMinutes(record) {
+  const text = String(record.actualTime || '');
+  const clock = text.match(/(\d+)\s*:\s*(\d{1,2})/);
+  if (clock) return +clock[1] * 60 + +clock[2];
+  const hours = text.match(/(\d+(?:\.\d+)?)\s*시간/);
+  const minutes = text.match(/(\d+)\s*분/);
+  if (hours || minutes) return Math.round((hours ? +hours[1] * 60 : 0) + (minutes ? +minutes[1] : 0));
+  const track = hikeHasTrack(record.hikeTrack) ? record.hikeTrack : null;
+  return Number.isFinite(track?.minutes) && track.minutes > 0 ? track.minutes : 0;
+}
+function recordAltitude(record) {
+  const type = certificationTypeOf(record);
+  const points = record.certified?.length ? record.certified : certificationPoints(record);
+  const links = scheduleBacLinks(record.bacLinks, type, points);
+  const ids = points.map(point => links.find(link => link.point === point)?.id ||
+    (type !== 'undecided' ? legacyBacMatch(type, point, record.region || '') : ''));
+  return ids.map(id => bacById.get(id)).filter(Boolean)
+    .map(place => ({name:place.label.replace(/^(\S+)\s+\1/u, '$1'), altitude:recordNumber(place.altitude)}))
+    .sort((first, second) => second.altitude - first.altitude)[0] || null;
+}
+const recordYearOf = record => (record.end || record.start || '').slice(0, 4);
+const groupNumber = (value, digits = 0) => value.toLocaleString('ko-KR', {maximumFractionDigits:digits});
+
+function renderHikeRecords(loading) {
+  const box = $('#hike-records');
+  if (!box) return;
+  const hikes = records.filter(record => record.status === 'done' && isHike(categoryOf(record)));
+  box.hidden = loading || !hikes.length;
+  if (box.hidden) return box.replaceChildren();
+  const years = [...new Set(hikes.map(recordYearOf).filter(Boolean))].sort().reverse();
+  if (recordYear !== 'all' && !years.includes(recordYear)) recordYear = years[0] || 'all';
+  const list = recordYear === 'all' ? hikes : hikes.filter(record => recordYearOf(record) === recordYear);
+  const peaks = new Set(list.flatMap(record => (record.certified?.length ? record.certified : certificationPoints(record))
+    .map(name => name.normalize('NFC').replace(/\s+/g, ''))).filter(Boolean));
+  const distance = list.reduce((sum, record) => sum + recordNumber(actualHikeMetrics(record).distance), 0);
+  const ascent = list.reduce((sum, record) => sum + recordNumber(actualHikeMetrics(record).ascent), 0);
+  const minutes = list.reduce((sum, record) => sum + recordMinutes(record), 0);
+  const highest = list.map(record => ({record, place:recordAltitude(record)})).filter(item => item.place?.altitude)
+    .sort((first, second) => second.place.altitude - first.place.altitude)[0];
+  const stamped = list.filter(isCompletedCertification)
+    .sort((first, second) => (second.end || second.start || '').localeCompare(first.end || first.start || ''));
+  const scopeLabel = recordYear === 'all' ? '지금까지' : recordYear + '년';
+
+  const buckets = recordYear === 'all'
+    ? [...years].reverse().map(year => [year.slice(2) + '년', hikes.filter(record => recordYearOf(record) === year).length])
+    : Array.from({length:12}, (_, index) => [index + 1 + '월',
+      list.filter(record => +(record.end || record.start || '').slice(5, 7) === index + 1).length]);
+  const peak = Math.max(1, ...buckets.map(([, count]) => count));
+  const thisMonth = recordYear === today.slice(0, 4) ? +today.slice(5, 7) : 0;
+
+  const stat = (label, value, unit, note = '') => `<div class="record-stat"><span>${label}</span>
+    <strong>${value}<small>${unit}</small></strong>${note ? `<em>${note}</em>` : ''}</div>`;
+  const hours = Math.floor(minutes / 60);
+  const everest = ascent / everestHeight;
+
+  box.innerHTML = `<div class="record-years" role="group" aria-label="기록 기간">${
+      [...years.map(year => [year, year + '년']), ['all', '전체']].map(([value, label]) =>
+        `<button type="button" data-record-year="${value}" aria-pressed="${value === recordYear}">${label}</button>`).join('')}</div>
+    <div class="record-stats">
+      ${stat('산행', groupNumber(list.length), '회', peaks.size ? `다녀온 산 ${groupNumber(peaks.size)}곳` : '')}
+      ${stat('걸은 거리', distance ? groupNumber(distance, 1) : '—', distance ? 'km' : '', distance >= 42.195 ? `마라톤 ${groupNumber(distance / 42.195, 1)}번` : '')}
+      ${stat('오른 높이', ascent ? groupNumber(ascent) : '—', ascent ? 'm' : '', ascent ? `에베레스트 ${groupNumber(everest, everest < 1 ? 2 : 1)}번` : '')}
+      ${stat('산에서 보낸 시간', minutes ? groupNumber(hours) : '—', minutes ? '시간' : '', minutes % 60 ? `${minutes % 60}분 더` : '')}
+    </div>
+    ${!distance && !ascent && !minutes ? '<p class="hint record-hint">완료한 산행에 실제 거리·시간·상승고도를 적거나 GPX를 넣으면 여기에 쌓여요.</p>' : ''}
+    <div class="record-panels">
+      <section class="record-panel" aria-label="${scopeLabel} ${recordYear === 'all' ? '연도별' : '월별'} 산행 횟수">
+        <h3>${recordYear === 'all' ? '연도별' : '월별'} 산행</h3>
+        <ol class="record-bars">${buckets.map(([label, count], index) =>
+          `<li class="${recordYear !== 'all' && index + 1 === thisMonth ? 'is-now' : ''}" title="${label} ${count}회">
+            <span class="record-bar" style="--h:${count / peak}"><b>${count || ''}</b></span><span class="record-bar-label">${label}</span></li>`).join('')}</ol>
+      </section>
+      <section class="record-panel record-highest">
+        <h3>가장 높이 오른 산</h3>
+        ${highest ? `<button type="button" data-record="${escape(highest.record.id)}"><strong>${escape(highest.place.name)}</strong>
+          <span>${groupNumber(highest.place.altitude)}m · ${escape(scheduleDate(highest.record, true))}</span></button>`
+          : '<p class="hint">명산 목록에 있는 산을 다녀오면 높이가 표시돼요.</p>'}
+      </section>
+    </div>
+    <section class="record-panel record-stamps-panel">
+      <h3>도장 모음 <small>${groupNumber(stamped.length)}개</small></h3>
+      ${stamped.length ? `<ul class="record-stamps">${stamped.map(record => `<li><button type="button" data-record="${escape(record.id)}">
+        ${pandaStamp(record, 'collection')}<span>${escape(record.certified.join(' · '))}</span></button></li>`).join('')}</ul>`
+        : '<p class="hint">인증까지 마친 산행에는 레서판다 도장이 찍혀요.</p>'}
+    </section>`;
+}
+$('#hike-records')?.addEventListener('click', event => {
+  const year = event.target.closest('[data-record-year]')?.dataset.recordYear;
+  if (!year || year === recordYear) return;
+  recordYear = year;
+  renderHikeRecords(false);
+  $(`[data-record-year="${year}"]`)?.focus();
+});
 
 const feedSteps = [
   ['완료한 산행 열기','산행이나 백패킹 일정을 완료 처리해요.'],

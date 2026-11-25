@@ -589,3 +589,44 @@ html[data-color=dark] .offline-banner{background:#4a3f22}
 html[data-color=dark] .gear-presets .my-gear-set{background:#3a3220;border-color:#5a4a26;color:#f3dfaa}
 html[data-color=dark] :is(.gear-set-error,.gear-set-actions .danger){color:#f0a19b}
 html[data-color=dark] .gear-set-actions .danger{border-color:#6b3632}
+
+/* 내 산행 기록 */
+.hike-records{display:grid;gap:14px;margin:14px 0 26px}
+.hike-records[hidden],.hike-album-heading[hidden]{display:none}
+.record-years{display:flex;flex-wrap:wrap;gap:6px}
+.record-years button{min-height:36px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--white);color:var(--dim);font-weight:600}
+.record-years button[aria-pressed=true]{background:var(--pine);border-color:var(--pine);color:#fff}
+.record-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.record-stat{display:grid;align-content:start;gap:2px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--white)}
+.record-stat span{font-size:.82rem;font-weight:600;color:var(--dim)}
+.record-stat strong{font-size:clamp(1.5rem,4vw,2rem);line-height:1.2;letter-spacing:-.03em;color:var(--pine);font-variant-numeric:tabular-nums}
+.record-stat small{margin-left:3px;font-size:.9rem;font-weight:700;color:var(--ink)}
+.record-stat em{font-style:normal;font-size:.8rem;color:var(--jade)}
+.record-hint{margin:0}
+.record-panels{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:10px}
+.record-panel{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--white)}
+.record-panel h3{margin:0 0 12px;font-size:1rem}
+.record-panel h3 small{margin-left:4px;font-size:.85rem;color:var(--dim);font-weight:600}
+.record-bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin:0;padding:0;list-style:none}
+.record-bars li{flex:1;min-width:0;display:grid;grid-template-rows:1fr auto;height:100%;gap:4px;text-align:center}
+.record-bar{align-self:end;position:relative;height:calc(var(--h) * 100%);min-height:3px;border-radius:6px 6px 2px 2px;background:color-mix(in srgb,var(--jade) 28%,var(--white))}
+.record-bars li.is-now .record-bar{background:var(--jade)}
+.record-bars li.is-now .record-bar-label{color:var(--ink);font-weight:700}
+.record-bar b{position:absolute;inset:auto 0 100%;font-size:.72rem;color:var(--dim);font-variant-numeric:tabular-nums}
+.record-bar-label{font-size:.68rem;color:var(--dim);white-space:nowrap}
+.record-highest button{display:grid;gap:4px;width:100%;padding:14px;border:0;border-radius:12px;background:color-mix(in srgb,var(--jade) 12%,var(--white));text-align:left;color:var(--ink)}
+.record-highest strong{font-size:1.2rem;color:var(--pine)}
+.record-highest span{font-size:.85rem;color:var(--dim)}
+.record-stamps{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.record-stamps button{display:grid;justify-items:center;gap:6px;width:100%;padding:10px 6px;border:0;border-radius:12px;background:transparent;color:var(--ink)}
+.record-stamps button:hover{background:color-mix(in srgb,var(--jade) 12%,var(--white))}
+.record-stamps span{font-size:.8rem;font-weight:600;line-height:1.3;text-align:center;overflow-wrap:anywhere}
+.panda-stamp-collection{width:72px;height:72px;transform:rotate(-8deg);opacity:.92;mix-blend-mode:multiply}
+.record-stamps li:nth-child(even) .panda-stamp-collection{transform:rotate(7deg)}
+.hike-album-heading{margin:8px 0 12px;font-size:1.2rem}
+@media(max-width:700px){.record-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.record-panels{grid-template-columns:1fr}}
+html[data-color=dark] :is(.record-stat,.record-panel,.record-years button:not([aria-pressed=true])){background:var(--white);border-color:var(--line)}
+html[data-color=dark] .record-stat strong,html[data-color=dark] .record-highest strong{color:#8fd0ab}
+html[data-color=dark] :is(.record-bar,.record-highest button,.record-stamps button:hover){background:#22392d}
+html[data-color=dark] .record-bars li.is-now .record-bar{background:#3f7a5b}
+html[data-color=dark] .record-years button[aria-pressed=true]{background:#3f7a5b;border-color:#3f7a5b}
