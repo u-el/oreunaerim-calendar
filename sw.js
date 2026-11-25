@@ -6,7 +6,7 @@
 // - Firebase SDK, Pretendard 글꼴: 버전이 주소에 들어 있어 저장본 우선
 // - 일정 데이터, 로그인, 날씨 요청은 건드리지 않음
 
-const CACHE = 'oreunaerim-offline-v5';
+const CACHE = 'oreunaerim-offline-v6';
 const CORE = [
   './',
   './index.html',
@@ -46,7 +46,8 @@ async function remember(request, response) {
 }
 
 async function page(request) {
-  const network = fetch(request).then(response => remember(new Request('./index.html'), response));
+  // 브라우저에 저장된 예전 첫 화면(GitHub Pages는 10분간 저장)을 건너뛰고 항상 새로 확인
+  const network = fetch(request.url, {cache:'no-cache', credentials:'same-origin'}).then(response => remember(new Request('./index.html'), response));
   const slow = new Promise(resolve => setTimeout(resolve, 4000));
   try {
     const response = await Promise.race([network, slow]);
