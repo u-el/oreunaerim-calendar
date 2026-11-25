@@ -117,9 +117,20 @@ function scheduleBacLinks(links, type, points) {
   return links.filter(link => typeof link?.id === 'string' && link.id.startsWith(type+':') && points.includes(link.point));
 }
 
+const bacAlternateRegions = {
+  'classic:백운산(동강)': ['동간'],
+  'classic:운악산': ['경기 포천', '경기 가평'],
+  'classic:금정산': ['부산', '부산 금정'],
+  'classic:팔공산': ['대구', '대구 동구', '대구 군위'],
+  'plus:수리산(경기 안양)': ['경기 군포']
+};
+
 function bacRegionMatches(place, region) {
   const normalized = bacKey(region).replace(/(특별시|광역시|특별자치도|도|시|군)$/u, '');
-  return !normalized || bacKey(place.region).includes(normalized);
+  if (!normalized) return true;
+  const nameRegion = place.name.match(/\(([^)]+)\)/)?.[1] || '';
+  return [place.region, nameRegion, ...(bacAlternateRegions[place.id] || [])]
+    .some(area => bacKey(area).includes(normalized));
 }
 
 function legacyBacMatch(type, name, region) {
