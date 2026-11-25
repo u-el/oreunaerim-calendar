@@ -395,3 +395,9 @@ body.forest-interface[data-theme]{
 #editor .dialog-actions{flex-wrap:wrap}
 #delete-schedule{color:#9b2c28;border-color:#dfb7b3}
 #delete-schedule:hover{background:#fff1ef}
+
+.editor-section{border:1px solid var(--line);border-radius:12px}
+.editor-section summary{cursor:pointer;padding:10px 12px;font-weight:700;color:var(--pine)}
+#hike-photo-preview{display:block;width:min(100%,320px);height:auto;border-radius:10px}
+#hike-photo-status:empty,#hike-notice-status:empty{display:none}
+#hike-notice-preview{display:grid;gap:8px}
