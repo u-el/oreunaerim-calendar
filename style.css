@@ -562,3 +562,9 @@ html[data-color=dark] #toast{background:#e3ebe5;color:#0f1a15}
 @media(prefers-reduced-motion:reduce){.hike-overview-stamp.stamp-in .panda-stamp{animation:none}}
 @media(max-width:560px){.panda-stamp-card{width:54px;height:54px;right:2px}.schedule-card.is-stamped,.forest-interface :is(#records,#events) .schedule-card.is-stamped{padding-right:60px}}
 html[data-color=dark] .panda-stamp{--stamp-ink:#ff8a7a;mix-blend-mode:normal;opacity:.85}
+
+/* 오프라인 안내 */
+.offline-banner{position:sticky;top:0;z-index:4;background:#3a3220;color:#fff4d6;font-size:.86rem}
+.offline-banner .shell{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;padding-block:8px}
+.offline-banner strong{font-weight:800}
+html[data-color=dark] .offline-banner{background:#4a3f22}

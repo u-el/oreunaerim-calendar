@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
-import { getFirestore, collection, doc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const app = initializeApp({
   apiKey: 'AIzaSyAvNt0OvhibmXN4wZr1gjP2UZMO91jnyR8',
@@ -9,7 +9,8 @@ const app = initializeApp({
   appId: '1:810927578233:web:ac23ad3356a1fb4e4d88a8'
 });
 const auth = getAuth(app);
-const db = getFirestore(app);
+// 마지막으로 받은 계정 일정을 기기에 저장해 두고 오프라인에서도 보여 줌
+const db = initializeFirestore(app, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})});
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({prompt:'select_account'});
 
@@ -22,8 +23,8 @@ export function observeAccount(callback) {
 }
 
 export function observeSchedules(uid, onRecords, onError) {
-  return onSnapshot(schedules(uid), snapshot => {
-    onRecords(snapshot.docs.map(item => ({...item.data(),id:item.id})));
+  return onSnapshot(schedules(uid), {includeMetadataChanges:true}, snapshot => {
+    onRecords(snapshot.docs.map(item => ({...item.data(),id:item.id})), snapshot.metadata.fromCache);
   }, onError);
 }
 
@@ -31,8 +32,14 @@ export function login() {
   return signInWithPopup(auth, provider);
 }
 
-export function logout() {
-  return signOut(auth);
+export async function logout() {
+  await signOut(auth);
+  // 같이 쓰는 기기에 계정 일정이 남지 않도록 기기 저장본을 지움
+  try {
+    await terminate(db);
+    await clearIndexedDbPersistence(db);
+  } catch {}
+  location.reload();
 }
 
 export function saveSchedule(uid, record) {

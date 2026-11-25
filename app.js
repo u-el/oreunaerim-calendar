@@ -519,6 +519,10 @@ function showLoginHelp(shared, message) {
 }
 
 async function loginWithBrowserHelp(shared = false) {
+  if (!navigator.onLine) {
+    feedback('오프라인이에요. 인터넷에 연결되면 로그인할 수 있어요.');
+    return;
+  }
   if (!sync || pendingOperation) return;
   const help = loginBrowserHelp(shared);
   if (help) {
@@ -1186,7 +1190,7 @@ function renderAccountBanner() {
   if (!banner) return;
   let dismissed = false;
   try { dismissed = localStorage.getItem(bannerKey) === '1'; } catch {}
-  banner.hidden = Boolean(account) || !sync || dismissed || showingHikeFeed;
+  banner.hidden = Boolean(account) || !sync || dismissed || showingHikeFeed || !navigator.onLine;
 }
 const bannerKey = 'oreunaerim:account-banner-dismissed';
 
@@ -1689,7 +1693,8 @@ async function save(statusOverride) {
       localStorage.setItem(key,JSON.stringify(nextRecords));
     }
   } catch {
-    showEditorError(uid ? '계정에 저장할 수 없어요. 연결 상태를 확인한 뒤 다시 저장해 주세요.' : '브라우저에서 저장할 수 없어요. 저장 공간이나 브라우저 설정을 확인해 주세요.');
+    showEditorError(uid && !navigator.onLine ? '오프라인에서는 계정 일정을 고칠 수 없어요. 인터넷에 연결되면 다시 저장해 주세요.' :
+      uid ? '계정에 저장할 수 없어요. 연결 상태를 확인한 뒤 다시 저장해 주세요.' : '브라우저에서 저장할 수 없어요. 저장 공간이나 브라우저 설정을 확인해 주세요.');
     return;
   }
   finally {
@@ -2137,6 +2142,34 @@ $('#gear-presets')?.addEventListener('click', event => {
   if (preset) addGearPreset(preset);
 });
 
+/* ---- 오프라인 ---- */
+let showingSavedCopy = false;
+function renderOfflineBanner() {
+  const banner = $('#offline-banner');
+  if (!banner) return;
+  const offline = !navigator.onLine;
+  banner.hidden = !offline;
+  if (!offline) return;
+  $('#offline-detail').textContent = account
+    ? '마지막으로 동기화한 일정과 코스·준비물을 볼 수 있어요. 수정은 연결되면 할 수 있어요.'
+    : '이 기기에 저장된 일정을 그대로 보고 고칠 수 있어요.';
+}
+addEventListener('online', () => {
+  renderOfflineBanner();
+  renderAccountBanner();
+  if (account && showingSavedCopy) $('#sync-status').textContent = '다시 연결됐어요. 일정을 맞추는 중…';
+  feedback('다시 연결됐어요.');
+});
+addEventListener('offline', () => {
+  renderOfflineBanner();
+  renderAccountBanner();
+  feedback('오프라인이에요. 저장된 일정을 보여 드릴게요.');
+});
+renderOfflineBanner();
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
 initLoginBrowserHelp();
 if ($('#schedule-share-dialog')) initScheduleShare();
 render();
@@ -2175,11 +2208,13 @@ function changeAccount(user) {
   }
   status.textContent = '계정 일정 불러오는 중…';
   render();
-  stopSchedules = sync.observeSchedules(user.uid, incoming => {
+  stopSchedules = sync.observeSchedules(user.uid, (incoming, fromCache) => {
     if (account?.uid !== user.uid) return;
     cloudReady = true;
+    showingSavedCopy = Boolean(fromCache) && !navigator.onLine;
     records = incoming.filter(record => record.deleted !== true);
-    status.textContent = '동기화 중: ' + (user.email || 'Google 계정');
+    status.textContent = (showingSavedCopy ? '오프라인 · 저장해 둔 일정 보는 중: ' : '동기화 중: ') + (user.email || 'Google 계정');
+    renderOfflineBanner();
     try {
       const cloudIds = new Set(incoming.map(record => record.id));
       $('#import-local').hidden = !localRecords().some(record => !cloudIds.has(record.id));
@@ -2205,7 +2240,7 @@ async function runAccountAction(action, errorMessage) {
   finally { setSyncBusy(false); }
 }
 
-if ($('#sync-status')) import('./sync.mjs?v=schedule-sharing').then(module => {
+if ($('#sync-status')) import('./sync.mjs?v=offline').then(module => {
   sync = module;
   updateScheduleShare();
   renderAccountBanner();
