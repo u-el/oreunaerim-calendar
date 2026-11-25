@@ -59,7 +59,8 @@ const allFields = ['category','certificationType','name','region','start','end',
 const readScheduleFields = () => Object.fromEntries(allFields.filter(name => field(name)).map(name => [name,field(name).value.trim()]));
 const certificationPoints = record => [...new Set(names(record.peakNames?.trim() || record.name))];
 const hikingMetrics = record => [record.routeType, record.distance && record.distance+'km', record.estimatedTime, record.difficulty && '난이도 '+record.difficulty].filter(Boolean).join(' · ');
-let hikePhoto = '';
+const hikePhotoLimit = 5;
+let hikePhotos = [];
 let photoRequest = 0;
 let photoLoading = false;
 const fmt = date => date ? date.replaceAll('-', '.') : '날짜 미정';
@@ -70,7 +71,10 @@ let selectedDay = '';
 let view = 'planned';
 let menu = 'all';
 let showingHikeFeed = false;
-const hasHikePhoto = record => /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(record.hikePhoto || '');
+const validHikePhoto = photo => typeof photo === 'string' && photo.length <= 180000 &&
+  /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photo);
+const savedHikePhotos = record => [record.hikePhoto, ...(Array.isArray(record.hikeExtraPhotos) ? record.hikeExtraPhotos : [])]
+  .filter(validHikePhoto).slice(0, hikePhotoLimit);
 const crewMascots = ['glasses', 'hike', 'picnic', 'grill', 'ribbon', 'snack'];
 const crewMascotIndex = {hike:5, food:1, play:3};
 let editing;
@@ -415,6 +419,7 @@ function renderCertification() {
 function render() {
   renderCertification();
   renderBacProgress();
+  renderHikeSearch();
   const active = menus[menu];
   document.body.dataset.theme = menu;
   document.querySelectorAll('[data-menu]').forEach(button => {
@@ -718,24 +723,64 @@ function handleHikePin(event) {
   }, {enableHighAccuracy:true, timeout:15000, maximumAge:0});
 }
 
+function searchHikeSchedules(query, status) {
+  const terms = query.trim().split(/\s+/).map(bacKey).filter(Boolean);
+  if (!terms.length) return [];
+  return records.filter(record => {
+    if (!isHike(categoryOf(record)) || !['planned','done'].includes(record.status) || (status && record.status !== status)) return false;
+    const keywords = bacKey([record.name, record.region, record.trailhead, record.summit, record.waypoints,
+      record.trailEnd, record.actualRoute, record.peakNames, ...(record.certified || [])].filter(Boolean).join(' '));
+    return terms.every(term => keywords.includes(term));
+  }).sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'planned' ? -1 : 1;
+    if (!a.start || !b.start) return Number(!a.start) - Number(!b.start);
+    return a.status === 'planned' ? a.start.localeCompare(b.start) : b.start.localeCompare(a.start);
+  });
+}
+
+function renderHikeSearch() {
+  const panel = $('#hike-search');
+  if (!panel) return;
+  panel.hidden = menu !== 'hike' || showingHikeFeed;
+  if (panel.hidden) return;
+  const query = $('#hike-search-query').value;
+  const results = $('#hike-search-results');
+  const count = $('#hike-search-count');
+  const status = $('#hike-search-status').value;
+  count.textContent = '';
+  results.replaceChildren();
+  if (!bacKey(query)) return;
+  if (account && !cloudReady) {
+    count.textContent = $('#sync-status').textContent;
+    return;
+  }
+  const found = searchHikeSchedules(query, status);
+  count.textContent = found.length ? '검색 결과 '+found.length+'건' : '일치하는 산행 일정이 없어요.';
+  results.innerHTML = found.map(record => scheduleCard(record, record.status)).join('');
+}
+
 function renderHikeFeed() {
   const posts = account && cloudReady ? records.filter(record => record.status === 'done' &&
-    isHike(categoryOf(record)) && (hasHikePhoto(record) || hikeHasTrack(record.hikeTrack))).sort((first, second) =>
+    isHike(categoryOf(record)) && (savedHikePhotos(record).length || hikeHasTrack(record.hikeTrack))).sort((first, second) =>
       (second.start || '').localeCompare(first.start || '') || (second.end || '').localeCompare(first.end || '')) : [];
   const message = $('#hike-feed-message');
   message.hidden = posts.length > 0;
   message.textContent = !account ? 'Google 계정으로 로그인하면 내 산행 사진과 경로를 볼 수 있어요.' :
     !cloudReady ? $('#sync-status').textContent : '완료한 산행이나 백패킹 일정에 사진이나 GPX 경로를 저장하면 여기에 나타나요.';
-  $('#hike-feed-cards').innerHTML = posts.map(record => `
+  $('#hike-feed-cards').innerHTML = posts.map(record => {
+    const photos = savedHikePhotos(record);
+    return `
     <button type="button" class="hike-feed-card" data-record="${escape(record.id)}">
-      ${hasHikePhoto(record) ? '<img src="'+escape(record.hikePhoto)+'" alt="" loading="lazy" decoding="async">' : ''}
+      ${photos.length ? '<img src="'+escape(photos[0])+'" alt="" loading="lazy" decoding="async">' : ''}
       <span class="hike-feed-card-body">
         <strong>${escape(record.name)}</strong>
+        ${photos.length > 1 ? '<span>사진 '+photos.length+'장</span>' : ''}
         <span>${escape(scheduleDate(record, true))}${record.actualTime ? ' · '+escape(record.actualTime) : ''}</span>
         ${isCompletedCertification(record) ? '<span class="schedule-status status-certified">인증 완료</span>' : ''}
       </span>
       ${hikeTrackPreview(record.hikeTrack)}
-    </button>`).join('');
+    </button>`;
+  }).join('');
 }
 
 function scheduleDate(record, includeYear) {
@@ -831,7 +876,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   if ($('#hike-photo')) {
     photoRequest++;
     photoLoading = false;
-    hikePhoto = hasHikePhoto(record) ? record.hikePhoto : '';
+    hikePhotos = savedHikePhotos(record);
     $('#hike-photo').value = '';
     $('#hike-planning').open = false;
     $('#hike-log').open = false;
@@ -888,6 +933,7 @@ function renderCategory() {
     for (const input of section.querySelectorAll('input, select, textarea')) input.disabled = !hike;
   }
   if ($('#hike-location')) $('#hike-location').hidden = !hike || !editing.id;
+  if ($('#hike-photo')) $('#hike-photo').disabled = !hike || photoLoading || hikePhotos.length >= hikePhotoLimit;
   const camping = $('#backpacking-fields');
   if (camping) camping.hidden = camping.disabled = field('category').value !== 'backpacking';
   const noticeButton = $('#build-hike-notice');
@@ -926,47 +972,83 @@ function updateMapLink() {
 }
 
 function renderHikePhoto(message = '') {
-  const preview = $('#hike-photo-preview');
-  preview.hidden = $('#remove-hike-photo').hidden = !hikePhoto;
-  if (hikePhoto) preview.src = hikePhoto;
-  else preview.removeAttribute('src');
+  const gallery = $('#hike-photo-gallery');
+  gallery.innerHTML = hikePhotos.map((photo, index) =>
+    `<figure><img src="${escape(photo)}" alt="산행 사진 ${index+1}" loading="lazy" decoding="async"><figcaption><button type="button" data-remove-photo="${index}" aria-label="사진 ${index+1} 제거" ${photoLoading ? 'disabled' : ''}>제거</button></figcaption></figure>`).join('');
+  gallery.hidden = !hikePhotos.length;
+  $('#hike-photo-count').textContent = `${hikePhotos.length} / ${hikePhotoLimit}장`;
+  $('#hike-photo').disabled = !isHike(field('category').value) || photoLoading || hikePhotos.length >= hikePhotoLimit;
   $('#hike-photo-status').textContent = message;
 }
 
-async function loadHikePhoto(event) {
-  const input = event.currentTarget;
-  const file = input.files[0];
-  input.value = '';
-  if (!file) return;
-  const request = ++photoRequest;
-  photoLoading = true;
-  renderHikePhoto('사진 불러오는 중…');
+async function compressHikePhoto(file) {
   const url = URL.createObjectURL(file);
   try {
     const image = new Image();
     image.src = url;
     await image.decode();
     const canvas = document.createElement('canvas');
-    const scale = Math.min(1, 640 / Math.max(image.naturalWidth, image.naturalHeight));
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
     const context = canvas.getContext('2d');
-    context.fillStyle = '#fff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    let photo = canvas.toDataURL('image/jpeg', 0.62);
-    if (photo.length > 180000) photo = canvas.toDataURL('image/jpeg', 0.35);
-    if (!photo.startsWith('data:image/jpeg;base64,') || photo.length > 180000) throw new Error('Invalid photo');
-    if (request === photoRequest && dialog.open) {
-      hikePhoto = photo;
-      renderHikePhoto('사진을 첨부했어요. 저장하면 일정에 남아요.');
+    for (const [maxSide, quality] of [[640, .64], [640, .40], [480, .40], [320, .36]]) {
+      const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      context.fillStyle = '#fff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const photo = canvas.toDataURL('image/jpeg', quality);
+      if (photo.length <= 100000 && validHikePhoto(photo)) return photo;
     }
-  } catch {
-    if (request === photoRequest && dialog.open) renderHikePhoto('사진을 열지 못했어요. JPG 또는 PNG 사진으로 다시 시도해 주세요.');
+    throw new Error('Photo could not be compressed');
   } finally {
     URL.revokeObjectURL(url);
-    if (request === photoRequest) photoLoading = false;
   }
+}
+
+async function loadHikePhoto(event) {
+  const input = event.currentTarget;
+  const files = Array.from(input.files);
+  input.value = '';
+  if (!files.length || photoLoading || hikePhotos.length >= hikePhotoLimit) return;
+  const request = ++photoRequest;
+  const selection = files.slice(0, hikePhotoLimit - hikePhotos.length);
+  let added = 0;
+  photoLoading = true;
+  renderHikePhoto('사진 불러오는 중…');
+  for (const file of selection) {
+    let photo;
+    try { photo = await compressHikePhoto(file); } catch { /* Other selected photos can still be added. */ }
+    if (request !== photoRequest || !dialog.open) return;
+    if (photo) {
+      hikePhotos.push(photo);
+      added++;
+    }
+  }
+  photoLoading = false;
+  renderHikePhoto([
+    added ? `${added}장을 첨부했어요. 일정에서 저장하면 사진이 남아요.` : '',
+    added < selection.length ? `${selection.length-added}장을 열지 못했어요. JPG나 PNG로 다시 시도해 주세요.` : '',
+    selection.length < files.length ? `최대 ${hikePhotoLimit}장까지 첨부할 수 있어요.` : ''
+  ].filter(Boolean).join(' '));
+}
+
+function initHikePhotos() {
+  const input = $('#hike-photo');
+  if (!$('#hike-photo-gallery')) {
+    $('#hike-photo-preview').outerHTML = '<p class="hint" id="hike-photo-count"></p><div class="hike-photo-gallery" id="hike-photo-gallery" hidden></div>';
+    $('#remove-hike-photo').remove();
+  }
+  input.multiple = true;
+  input.onchange = loadHikePhoto;
+  $('#hike-photo-gallery').onclick = event => {
+    const button = event.target.closest('[data-remove-photo]');
+    if (!button || photoLoading) return;
+    const index = Number(button.dataset.removePhoto);
+    hikePhotos.splice(index, 1);
+    renderHikePhoto('사진을 제거했어요. 일정에서 저장하면 반영돼요.');
+    $('#hike-photo-gallery').querySelector(`[data-remove-photo="${Math.min(index, hikePhotos.length-1)}"]`)?.focus();
+    if (!hikePhotos.length) input.focus();
+  };
 }
 
 function hikeNoticeText() {
@@ -1088,7 +1170,10 @@ async function save(statusOverride) {
     return;
   }
   const record = readScheduleFields();
-  if ($('#hike-photo')) record.hikePhoto = hikePhoto;
+  if ($('#hike-photo')) {
+    record.hikePhoto = hikePhotos[0] || '';
+    record.hikeExtraPhotos = hikePhotos.slice(1);
+  }
   if ($('#hike-track')) Object.assign(record, {hikePins, hikeTrack});
   else {
     if (editing.hikePins) record.hikePins = editing.hikePins;
@@ -1243,18 +1328,16 @@ if ($('#hike-photo')) {
   }
   field('peakNames').oninput = renderPeaks;
   field('mapUrl').oninput = updateMapLink;
-  $('#hike-photo').onchange = loadHikePhoto;
-  $('#remove-hike-photo').onclick = () => {
-    photoRequest++;
-    photoLoading = false;
-    hikePhoto = '';
-    renderHikePhoto('첨부 사진을 제거했어요.');
-  };
+  initHikePhotos();
   $('#build-hike-notice').onclick = buildHikeNotice;
   $('#copy-hike-notice').onclick = () => copyHikeNotice();
 }
 if ($('#bac-search')) initBacPicker();
 if ($('#bac-progress')) initBacProgress();
+if ($('#hike-search')) {
+  $('#hike-search-query').oninput = renderHikeSearch;
+  $('#hike-search-status').onchange = renderHikeSearch;
+}
 if ($('#hike-overview')) {
   $('#hike-overview').onclick = event => {
     const section = event.target.closest('[data-hike-jump]')?.dataset.hikeJump;
@@ -1346,7 +1429,10 @@ function changeAccount(user) {
     cloudReady = false;
     status.textContent = '계정 일정에 연결할 수 없어요.';
     if (showingHikeFeed) render();
-    else renderBacProgress();
+    else {
+      renderBacProgress();
+      renderHikeSearch();
+    }
   });
 }
 
