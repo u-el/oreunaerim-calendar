@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const app = initializeApp({
   apiKey: 'AIzaSyAvNt0OvhibmXN4wZr1gjP2UZMO91jnyR8',
@@ -83,4 +83,19 @@ export function addSharedSchedule(uid, record) {
     transaction.set(ref, record);
     return true;
   });
+}
+
+function gearSetsDoc(uid) {
+  return doc(db, 'accounts', uid, 'settings', 'gearSets');
+}
+
+export function observeGearSets(uid, onSets, onError) {
+  return onSnapshot(gearSetsDoc(uid), snapshot => {
+    const sets = snapshot.data()?.sets;
+    onSets(Array.isArray(sets) ? sets : []);
+  }, onError);
+}
+
+export function saveGearSets(uid, sets) {
+  return setDoc(gearSetsDoc(uid), {sets, updatedAt: Date.now()});
 }

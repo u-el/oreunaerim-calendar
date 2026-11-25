@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=offline"><script defer src="app.js?v=offline-2"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=gear-sets"><script defer src="app.js?v=gear-sets"></script>
 <script>try{var c=localStorage.getItem('oreunaerim:color-scheme');document.documentElement.dataset.color=(c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="오르내림">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
@@ -636,7 +636,14 @@
 <ul id="bac-connected" aria-label="연결한 BAC 인증지" hidden></ul>
 <p class="hint bac-sources">BAC 공식 목록 · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/114" target="_blank" rel="noopener noreferrer">명산100</a> · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/172" target="_blank" rel="noopener noreferrer">명산100+</a> · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/158" target="_blank" rel="noopener noreferrer">섬&amp;산</a></p>
 </div><label>인증 포인트<input name="peakNames" placeholder="예) 월영산 · 선유봉" maxlength="600"></label><p class="hint">포인트 여러 개는 가운데점(·)으로 구분해요. 비워두면 산 이름을 사용해요.</p></details></div></details>
-<details class="editor-section" id="schedule-gear"><summary>준비물 체크</summary><div class="details-content"><div class="gear-presets" id="gear-presets" aria-label="준비물 세트 추가"><span class="hint">세트로 추가</span><button type="button" data-gear-preset="day">당일치기</button><button type="button" data-gear-preset="winter">겨울 산행</button><button type="button" data-gear-preset="backpacking">백패킹</button><button type="button" data-gear-preset="safety">비상용품</button></div><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div></div></details>
+<details class="editor-section" id="schedule-gear"><summary>준비물 체크</summary><div class="details-content"><div class="gear-presets" id="gear-presets" aria-label="준비물 세트 추가"><span class="hint">세트로 추가</span><button type="button" data-gear-preset="day">당일치기</button><button type="button" data-gear-preset="winter">겨울 산행</button><button type="button" data-gear-preset="backpacking">백패킹</button><button type="button" data-gear-preset="safety">비상용품</button></div><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div>
+<details class="gear-set-manager" id="gear-set-manager"><summary id="gear-set-count">내 세트 만들기</summary><div class="gear-set-body">
+<p class="hint">위 준비물 목록을 이름 붙여 저장하면, 다음 일정에서 ★ 버튼 한 번으로 넣을 수 있어요.</p>
+<div class="inline gear-set-form"><input id="gear-set-name" maxlength="30" placeholder="예) 지리산 1박, 여름 계곡" aria-label="새 세트 이름"><button type="button" id="gear-set-save">지금 목록 저장</button></div>
+<p id="gear-set-error" class="gear-set-error" role="alert"></p>
+<ul id="gear-set-list" class="gear-set-list" aria-label="내 준비물 세트"></ul>
+<p id="gear-set-sync" class="hint"></p>
+</div></details></div></details>
 <details class="editor-section" id="schedule-notice"><summary>공지 초안</summary><div class="details-content">
 <label>공지사항 초안<textarea name="notice" rows="5" placeholder="집결 장소, 출발 시간, 코스, 준비물 등을 적어두세요."></textarea></label>
 <button type="button" id="build-hike-notice" hidden>산행 정보로 공지 미리보기</button>

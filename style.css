@@ -568,3 +568,24 @@ html[data-color=dark] .panda-stamp{--stamp-ink:#ff8a7a;mix-blend-mode:normal;opa
 .offline-banner .shell{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;padding-block:8px}
 .offline-banner strong{font-weight:800}
 html[data-color=dark] .offline-banner{background:#4a3f22}
+
+/* 내 준비물 세트 */
+.gear-presets .my-gear-set{background:#f3ead0;border-color:#e3d3a3;color:#5a4613}
+.gear-set-manager{margin-top:10px;border:1px dashed var(--line);border-radius:10px}
+.gear-set-manager summary{cursor:pointer;padding:9px 12px;font-weight:700;color:var(--jade);font-size:.9rem}
+.gear-set-body{display:grid;gap:8px;padding:0 12px 12px}
+.gear-set-form input{flex:1}
+.gear-set-form button{min-height:40px}
+.gear-set-error{color:#9b2c28;font-size:.85rem}
+.gear-set-error:empty{display:none}
+.gear-set-list{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.gear-set-list li{display:grid;gap:6px;padding:9px 0;border-top:1px solid var(--line)}
+.gear-set-info{display:grid;gap:2px;min-width:0}
+.gear-set-info strong{color:var(--pine)}
+.gear-set-info span{color:var(--dim);font-size:.82rem;overflow-wrap:anywhere}
+.gear-set-actions{display:flex;flex-wrap:wrap;gap:6px}
+.gear-set-actions button{min-height:36px;padding:.25rem .65rem;font-size:.8rem}
+.gear-set-actions .danger{color:#9b2c28;border-color:#dfb7b3}
+html[data-color=dark] .gear-presets .my-gear-set{background:#3a3220;border-color:#5a4a26;color:#f3dfaa}
+html[data-color=dark] :is(.gear-set-error,.gear-set-actions .danger){color:#f0a19b}
+html[data-color=dark] .gear-set-actions .danger{border-color:#6b3632}

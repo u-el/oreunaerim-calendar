@@ -1969,12 +1969,181 @@ const gearPresets = {
   backpacking: ['텐트','침낭','매트','버너·가스','코펠','헤드랜턴','물·정수 필터','쓰레기봉투'],
   safety: ['구급약','호루라기','비상식','은박 담요','신분증']
 };
-function addGearPreset(name) {
-  const existing = new Set(gear.map(item => item.label.replace(/\s/g,'')));
-  const added = gearPresets[name].filter(label => !existing.has(label.replace(/\s/g,'')));
+const builtInGearSets = [['day','당일치기'],['winter','겨울 산행'],['backpacking','백패킹'],['safety','비상용품']];
+const gearLabelKey = label => label.replace(/\s/g,'');
+function addGearItems(labels, setName) {
+  const existing = new Set(gear.map(item => gearLabelKey(item.label)));
+  const added = labels.filter(label => !existing.has(gearLabelKey(label)));
   gear.push(...added.map(label => ({label, checked:false})));
   renderGear();
-  feedback(added.length ? '준비물 '+added.length+'개를 추가했어요.' : '이미 모두 들어 있어요.');
+  feedback(added.length ? `'${setName}'에서 준비물 ${added.length}개를 추가했어요.` : `'${setName}' 준비물이 이미 모두 들어 있어요.`);
+}
+function addGearPreset(name) {
+  addGearItems(gearPresets[name], builtInGearSets.find(([id]) => id === name)?.[1] || '세트');
+}
+
+/* ---- 내 준비물 세트 ---- */
+const gearSetKey = 'oreunaerim:gear-sets:v1';
+const gearSetLimit = 20;
+const gearSetItemLimit = 60;
+let gearSets = [];
+let stopGearSets;
+let cloudGearSets = false;
+try {
+  const saved = JSON.parse(localStorage.getItem(gearSetKey) || '[]');
+  if (Array.isArray(saved)) gearSets = saved.filter(validGearSet);
+} catch {}
+
+function validGearSet(set) {
+  return Boolean(set) && typeof set.id === 'string' && typeof set.updatedAt === 'number' &&
+    (set.deleted === true || (typeof set.name === 'string' && Array.isArray(set.items)));
+}
+const liveGearSets = () => gearSets.filter(set => !set.deleted).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+function mergeGearSets(...lists) {
+  const byId = new Map();
+  for (const set of lists.flat().filter(validGearSet)) {
+    const current = byId.get(set.id);
+    if (!current || set.updatedAt > current.updatedAt) byId.set(set.id, set);
+  }
+  return [...byId.values()];
+}
+const gearSetsSignature = sets => JSON.stringify([...sets].sort((a, b) => a.id.localeCompare(b.id)));
+
+function persistGearSets() {
+  try { localStorage.setItem(gearSetKey, JSON.stringify(gearSets)); } catch {}
+  if (account && sync?.saveGearSets && cloudGearSets && navigator.onLine) {
+    sync.saveGearSets(account.uid, gearSets).catch(() => { cloudGearSets = false; renderGearSets(); });
+  }
+  renderGearSets();
+}
+
+function watchGearSets(user) {
+  stopGearSets?.();
+  stopGearSets = null;
+  cloudGearSets = false;
+  if (!user || !sync?.observeGearSets) return;
+  stopGearSets = sync.observeGearSets(user.uid, cloudSets => {
+    if (account?.uid !== user.uid) return;
+    cloudGearSets = true;
+    const valid = cloudSets.filter(validGearSet);
+    const merged = mergeGearSets(gearSets, valid);
+    const changedCloud = gearSetsSignature(merged) !== gearSetsSignature(valid);
+    gearSets = merged;
+    try { localStorage.setItem(gearSetKey, JSON.stringify(gearSets)); } catch {}
+    renderGearSets();
+    if (changedCloud && navigator.onLine) sync.saveGearSets(user.uid, gearSets).catch(() => { cloudGearSets = false; renderGearSets(); });
+  }, () => { cloudGearSets = false; renderGearSets(); });
+}
+
+function currentGearLabels() {
+  return [...new Map(gear.map(item => item.label.trim()).filter(Boolean).map(label => [gearLabelKey(label), label])).values()]
+    .slice(0, gearSetItemLimit);
+}
+
+function saveGearSet(name) {
+  const clean = name.replace(/\s+/g, ' ').trim().slice(0, 30);
+  const items = currentGearLabels();
+  if (!clean) return '세트 이름을 입력해 주세요.';
+  if (!items.length) return '먼저 준비물을 추가해 주세요.';
+  const same = liveGearSets().find(set => set.name === clean);
+  if (!same && liveGearSets().length >= gearSetLimit) return `내 세트는 ${gearSetLimit}개까지 만들 수 있어요.`;
+  const set = {id: same?.id || crypto.randomUUID(), name: clean, items, updatedAt: Date.now()};
+  gearSets = [...gearSets.filter(item => item.id !== set.id), set];
+  persistGearSets();
+  feedback(same ? `'${clean}' 세트를 지금 목록으로 바꿨어요.` : `'${clean}' 세트를 만들었어요. 다른 일정에서도 한 번에 넣을 수 있어요.`);
+  return '';
+}
+
+function updateGearSet(id, changes) {
+  const set = gearSets.find(item => item.id === id && !item.deleted);
+  if (!set) return;
+  gearSets = [...gearSets.filter(item => item.id !== id), {...set, ...changes, updatedAt: Date.now()}];
+  persistGearSets();
+}
+
+function deleteGearSet(id) {
+  const set = gearSets.find(item => item.id === id && !item.deleted);
+  if (!set) return;
+  gearSets = [...gearSets.filter(item => item.id !== id), {id, deleted: true, updatedAt: Date.now()}];
+  persistGearSets();
+  feedback(`'${set.name}' 세트를 지웠어요.`);
+}
+
+function renderGearSets() {
+  const presets = $('#gear-presets');
+  if (!presets) return;
+  const mine = liveGearSets();
+  presets.innerHTML = '<span class="hint">세트로 추가</span>' +
+    builtInGearSets.map(([id, label]) => `<button type="button" data-gear-preset="${id}">${label}</button>`).join('') +
+    mine.map(set => `<button type="button" class="my-gear-set" data-gear-set="${escape(set.id)}" title="${escape(set.items.join(', '))}">★ ${escape(set.name)}</button>`).join('');
+  if (!$('#gear-set-manager')) return;
+  $('#gear-set-count').textContent = mine.length ? `내 세트 관리 (${mine.length})` : '내 세트 만들기';
+  $('#gear-set-list').innerHTML = mine.length ? mine.map(set => `<li data-set-id="${escape(set.id)}">
+      <div class="gear-set-info"><strong>${escape(set.name)}</strong><span>${escape(set.items.join(' · '))}</span></div>
+      <div class="gear-set-actions">
+        <button type="button" data-set-action="replace">지금 목록으로 바꾸기</button>
+        <button type="button" data-set-action="rename">이름 바꾸기</button>
+        <button type="button" data-set-action="delete" class="danger">지우기</button>
+      </div></li>`).join('') : '<li class="hint">아직 만든 세트가 없어요. 위 준비물 목록을 원하는 대로 만든 뒤 이름을 붙여 저장해 보세요.</li>';
+  $('#gear-set-sync').textContent = !account ? '내 세트는 이 기기에 저장돼요. 로그인하면 계정에도 저장돼요.' :
+    cloudGearSets ? '내 세트는 계정에 저장돼서 다른 기기에서도 보여요.' : '내 세트는 이 기기에 저장돼요.';
+}
+
+function initGearSets() {
+  if (!$('#gear-set-manager')) return;
+  const input = $('#gear-set-name');
+  const error = $('#gear-set-error');
+  const submit = () => {
+    error.textContent = saveGearSet(input.value);
+    if (!error.textContent) input.value = '';
+  };
+  $('#gear-set-save').addEventListener('click', submit);
+  input.addEventListener('input', () => { error.textContent = ''; });
+  dialog.addEventListener('close', () => {
+    error.textContent = '';
+    input.value = '';
+    $('#gear-set-manager').open = false;
+    renderGearSets();
+  });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.isComposing) {
+      event.preventDefault();
+      submit();
+    }
+  });
+  $('#gear-set-list').addEventListener('click', event => {
+    const button = event.target.closest('[data-set-action]');
+    const id = button?.closest('[data-set-id]')?.dataset.setId;
+    const set = gearSets.find(item => item.id === id && !item.deleted);
+    if (!set) return;
+    const action = button.dataset.setAction;
+    if (action === 'replace') {
+      const items = currentGearLabels();
+      if (!items.length) return feedback('먼저 준비물을 추가해 주세요.');
+      updateGearSet(id, {items});
+      feedback(`'${set.name}' 세트를 지금 목록으로 바꿨어요.`);
+    } else if (action === 'rename') {
+      const row = button.closest('li');
+      row.querySelector('.gear-set-info').innerHTML = `<input class="gear-set-rename" maxlength="30" value="${escape(set.name)}" aria-label="새 세트 이름">`;
+      button.textContent = '이름 저장';
+      button.dataset.setAction = 'rename-save';
+      row.querySelector('input').focus();
+      row.querySelector('input').select();
+    } else if (action === 'rename-save') {
+      const name = button.closest('li').querySelector('input').value.replace(/\s+/g, ' ').trim().slice(0, 30);
+      if (!name) return feedback('세트 이름을 입력해 주세요.');
+      if (liveGearSets().some(item => item.name === name && item.id !== id)) return feedback('같은 이름의 세트가 이미 있어요.');
+      updateGearSet(id, {name});
+      feedback(`세트 이름을 '${name}'(으)로 바꿨어요.`);
+    } else if (action === 'delete') {
+      button.textContent = '정말 지울까요?';
+      button.dataset.setAction = 'delete-confirm';
+    } else if (action === 'delete-confirm') {
+      deleteGearSet(id);
+    }
+  });
+  renderGearSets();
 }
 
 const weatherCodes = [[0,'☀️','맑음'],[2,'🌤️','구름 조금'],[3,'☁️','흐림'],[48,'🌫️','안개'],[57,'🌦️','이슬비'],[67,'🌧️','비'],
@@ -2139,8 +2308,12 @@ renderInstallCard();
 $('#duplicate-schedule')?.addEventListener('click', duplicateSchedule);
 $('#gear-presets')?.addEventListener('click', event => {
   const preset = event.target.closest('[data-gear-preset]')?.dataset.gearPreset;
-  if (preset) addGearPreset(preset);
+  if (preset) return addGearPreset(preset);
+  const id = event.target.closest('[data-gear-set]')?.dataset.gearSet;
+  const set = id && gearSets.find(item => item.id === id && !item.deleted);
+  if (set) addGearItems(set.items, set.name);
 });
+initGearSets();
 
 /* ---- 오프라인 ---- */
 let showingSavedCopy = false;
@@ -2198,6 +2371,8 @@ function setSyncBusy(busy) {
 function changeAccount(user) {
   stopSchedules?.();
   account = user;
+  watchGearSets(user);
+  renderGearSets();
   if (user) {
     for (const help of document.querySelectorAll('[data-login-help]')) help.hidden = true;
   }
@@ -2252,7 +2427,7 @@ async function runAccountAction(action, errorMessage) {
   finally { setSyncBusy(false); }
 }
 
-if ($('#sync-status')) import('./sync.mjs?v=offline').then(module => {
+if ($('#sync-status')) import('./sync.mjs?v=gear-sets').then(module => {
   sync = module;
   updateScheduleShare();
   renderAccountBanner();
