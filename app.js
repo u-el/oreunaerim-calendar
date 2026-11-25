@@ -92,6 +92,21 @@ function feedback(message) {
   toastTimer = setTimeout(() => $('#toast').textContent = '', 3200);
 }
 
+function pandaStamp(record, size = 'card') {
+  const date = (record.end || record.start || '').replaceAll('-', '.');
+  const label = '인증 완료 도장' + (date ? ', ' + date : '');
+  return `<svg class="panda-stamp panda-stamp-${size}" viewBox="0 0 100 100" role="img" aria-label="${escape(label)}">
+    <g filter="url(#stamp-ink)" fill="currentColor">
+      <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" stroke-width="3.2"/>
+      <circle cx="50" cy="50" r="41.5" fill="none" stroke="currentColor" stroke-width="1.1"/>
+      <text class="panda-stamp-top"><textPath href="#stamp-arc-top" startOffset="50%" text-anchor="middle">인증 완료</textPath></text>
+      ${date ? `<text class="panda-stamp-date"><textPath href="#stamp-arc-bottom" startOffset="50%" text-anchor="middle">${escape(date)}</textPath></text>` : ''}
+      <circle cx="17.5" cy="54" r="1.6"/><circle cx="82.5" cy="54" r="1.6"/>
+      <rect x="0" y="0" width="100" height="100" transform="translate(7 10) scale(.86)" mask="url(#stamp-panda-face)"/>
+    </g>
+  </svg>`;
+}
+
 function isCompletedCertification(record) {
   const type = certificationTypeOf(record);
   return record.status === 'done' && isHike(categoryOf(record)) &&
@@ -271,6 +286,15 @@ function renderHikeOverview() {
   const done = record.status === 'done';
   $('#hike-overview-name').textContent = record.name || '산행 요약';
   $('#hike-overview-status').textContent = done ? '완료' : '예정';
+  const certifiedNow = done && checks.size > 0 && record.certificationType !== 'undecided';
+  const stampSlot = $('#hike-overview-stamp');
+  if (stampSlot) {
+    const wasStamped = stampSlot.dataset.stamped === 'true';
+    stampSlot.innerHTML = certifiedNow ? pandaStamp(record, 'overview') : '';
+    stampSlot.dataset.stamped = certifiedNow;
+    stampSlot.classList.toggle('stamp-in', certifiedNow && !wasStamped && dialog.open);
+    $('#hike-overview-status').hidden = certifiedNow;
+  }
   const certification = record.certificationType === 'undecided' ? '미정' :
     [certificationTypes[record.certificationType], certificationPoints(record).join(' · ')].filter(Boolean).join(' · ');
   const rows = [
@@ -1119,8 +1143,8 @@ function renderHikeFeed() {
 
         <span>${escape(scheduleDate(record, true))}</span>
         ${summary ? '<span class="hike-card-metrics">'+escape(summary)+'</span>' : ''}
-        ${isCompletedCertification(record) ? '<span class="schedule-status status-certified">인증 완료</span>' : ''}
       </span>
+      ${isCompletedCertification(record) ? pandaStamp(record, 'feed') : ''}
       ${hikeTrackPreview(record.hikeTrack)}
     </button></div>`;
   }).join('');
@@ -1250,15 +1274,17 @@ function scheduleCard(record, displayView) {
   const meetup = [record.meetingTime, record.meetingPlace].filter(Boolean).join(' ');
   const details = [...(meetup && isHike(category) ? ['집결 '+meetup] : meeting), record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명', record.transport, record.overnight !== '숙박 없음' && record.lodging, gear.length && '준비물 '+gear.filter(item => item.checked).length+'/'+gear.length].filter(Boolean);
   const summary = isHike(category) && record.status === 'done' ? actualHikeSummary(record) : '';
-  const card = `<button class="schedule-card card kind-${kind}" type="button" data-record="${escape(record.id)}">
+  const stamped = status === 'certified';
+  const card = `<button class="schedule-card card kind-${kind}${stamped ? ' is-stamped' : ''}" type="button" data-record="${escape(record.id)}">
     <span class="schedule-date">${escape(scheduleDate(record, displayView !== 'month'))}</span>
     <span class="schedule-card-body">
-      <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong><span class="schedule-status status-${status}">${statusLabel}</span></span>
+      <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong>${stamped ? '' : `<span class="schedule-status status-${status}">${statusLabel}</span>`}</span>
       <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
       ${summary ? '<span class="hike-card-metrics">'+escape(summary)+'</span>' :
         isHike(category) && record.status !== 'done' && hikingMetrics(record) ? '<span class="meta">'+escape(hikingMetrics(record))+'</span>' : ''}
       ${details.length ? '<span class="meta">'+escape(details.join(' · '))+'</span>' : ''}
     </span>
+    ${stamped ? pandaStamp(record) : ''}
   </button>`;
   const photos = record.status === 'done' && isHike(category) ? savedHikePhotos(record) : [];
   return photos.length ? `<div class="album-card">${albumCover(record, photos)}${card}</div>` : card;
@@ -1843,6 +1869,7 @@ field('start').oninput = field('end').oninput = () => field('end').setCustomVali
 $('#peaks').onchange = ({target}) => {
   if (target.checked) checks.add(target.value);
   else checks.delete(target.value);
+  renderHikeOverview();
 };
 $('#gear').onchange = ({target}) => gear[Number(target.dataset.gear)].checked = target.checked;
 $('#gear').onclick = event => {

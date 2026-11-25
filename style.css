@@ -542,3 +542,23 @@ html[data-color=dark] .brand-mascot{border-color:#2c3d35}
 html[data-color=dark] .upcoming-mascot{border-color:#2c3d35}
 html[data-color=dark] .forest-interface .upcoming{background:linear-gradient(115deg,#0f2a1f,#1c3f2e 78%,#2b523c)}
 html[data-color=dark] #toast{background:#e3ebe5;color:#0f1a15}
+
+/* 레서판다 인증 도장 */
+.panda-stamp{--stamp-ink:#c4362b;display:block;flex:none;color:var(--stamp-ink);overflow:visible;pointer-events:none}
+.panda-stamp text{font-weight:900;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif}
+.panda-stamp-top{font-size:11.5px;letter-spacing:2px}
+.panda-stamp-date{font-size:8.6px;letter-spacing:.6px;font-variant-numeric:tabular-nums}
+.panda-stamp-card{position:absolute;right:6px;top:50%;width:64px;height:64px;transform:translateY(-50%) rotate(-12deg);opacity:.88;mix-blend-mode:multiply}
+.schedule-card.is-stamped{position:relative;padding-right:76px}
+.forest-interface :is(#records,#events) .schedule-card.is-stamped{padding-right:76px}
+.panda-stamp-feed{position:absolute;right:10px;bottom:10px;width:78px;height:78px;transform:rotate(-14deg);opacity:.9;mix-blend-mode:multiply}
+.hike-feed-card{position:relative}
+.hike-feed-card:has(.panda-stamp-feed) .hike-feed-card-body{padding-right:96px;min-height:96px}
+.hike-overview-stamp:empty{display:none}
+.hike-overview-stamp{flex:none;margin:-6px -4px -10px 0}
+.panda-stamp-overview{width:88px;height:88px;transform:rotate(-10deg);opacity:.92;mix-blend-mode:multiply}
+.hike-overview-stamp.stamp-in .panda-stamp{animation:stamp-in .5s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes stamp-in{0%{opacity:0;transform:scale(2.2) rotate(-24deg)}60%{opacity:1;transform:scale(.92) rotate(-8deg)}100%{transform:scale(1) rotate(-10deg)}}
+@media(prefers-reduced-motion:reduce){.hike-overview-stamp.stamp-in .panda-stamp{animation:none}}
+@media(max-width:560px){.panda-stamp-card{width:54px;height:54px;right:2px}.schedule-card.is-stamped,.forest-interface :is(#records,#events) .schedule-card.is-stamped{padding-right:60px}}
+html[data-color=dark] .panda-stamp{--stamp-ink:#ff8a7a;mix-blend-mode:normal;opacity:.85}
