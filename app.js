@@ -51,7 +51,16 @@ let pendingOperation = false;
 const form = $('#form');
 const dialog = $('#editor');
 const field = name => form.elements.namedItem(name);
-const allFields = ['category','certificationType','name','region','start','end','type','host','people','lodging','overnight','transport','budget','status','memo','notice'];
+const allFields = ['category','certificationType','name','region','start','end','type','host','people','lodging','overnight','transport','budget','status','memo','notice',
+  'trailhead','waypoints','summit','trailEnd','routeType','distance','estimatedTime','difficulty',
+  'meetingTime','meetingPlace','mapUrl','parking','vehiclePickup','campsite','campBooking','waterSource',
+  'actualTime','actualRoute','hikeNotes','peakNames'];
+const readScheduleFields = () => Object.fromEntries(allFields.filter(name => field(name)).map(name => [name,field(name).value.trim()]));
+const certificationPoints = record => [...new Set(names(record.peakNames?.trim() || record.name))];
+const hikingMetrics = record => [record.routeType, record.distance && record.distance+'km', record.estimatedTime, record.difficulty && '난이도 '+record.difficulty].filter(Boolean).join(' · ');
+let hikePhoto = '';
+let photoRequest = 0;
+let photoLoading = false;
 const fmt = date => date ? date.replaceAll('-', '.') : '날짜 미정';
 const iso = (year, month, day) => [year,String(month+1).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
 const today = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date());
@@ -193,12 +202,14 @@ function scheduleCard(record, displayView) {
   const gear = record.gear || [];
   const meeting = (record.notice || '').split('\n').map(line => line.trim())
     .filter(line => /^(집결(?:\s*(?:장소|시간))?|출발\s*(?:장소|시간))\s*[:：]/.test(line));
-  const details = [...meeting, record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명', record.transport, record.overnight !== '숙박 없음' && record.lodging, gear.length && '준비물 '+gear.filter(item => item.checked).length+'/'+gear.length].filter(Boolean);
+  const meetup = [record.meetingTime, record.meetingPlace].filter(Boolean).join(' ');
+  const details = [...(meetup && isHike(category) ? ['집결 '+meetup] : meeting), record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명', record.transport, record.overnight !== '숙박 없음' && record.lodging, gear.length && '준비물 '+gear.filter(item => item.checked).length+'/'+gear.length].filter(Boolean);
   return `<button class="schedule-card card kind-${kind}" type="button" data-record="${escape(record.id)}">
     <span class="schedule-date">${escape(scheduleDate(record, displayView !== 'month'))}</span>
     <span class="schedule-card-body">
       <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong><span class="schedule-status status-${status}">${statusLabel}</span></span>
       <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
+      ${isHike(category) && hikingMetrics(record) ? '<span class="meta">'+escape(hikingMetrics(record))+'</span>' : ''}
       ${details.length ? '<span class="meta">'+escape(details.join(' · '))+'</span>' : ''}
     </span>
   </button>`;
@@ -259,7 +270,21 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
     previous.dataset.previousValue = '';
     transport.add(previous);
   }
-  for (const name of allFields) field(name).value = record[name] ?? '';
+  for (const name of allFields) {
+    if (field(name)) field(name).value = record[name] ?? '';
+  }
+  if ($('#hike-photo')) {
+    photoRequest++;
+    photoLoading = false;
+    hikePhoto = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(record.hikePhoto || '') ? record.hikePhoto : '';
+    $('#hike-photo').value = '';
+    $('#hike-planning').open = false;
+    $('#hike-log').open = false;
+    $('#hike-notice-preview').hidden = true;
+    $('#hike-notice-status').textContent = '';
+    renderHikePhoto();
+    updateMapLink();
+  }
   field('category').value = categoryOf(record);
   field('certificationType').value = record.id ? certificationTypeOf(record) : $('#certification-filter').value || 'island';
   field('end').setCustomValidity('');
@@ -281,13 +306,110 @@ function renderCategory() {
   field('name').placeholder = hike ? '예) 가라산' : '예) 연말 저녁 모임';
   $('#certification').hidden = $('#certification-type-field').hidden = !hike;
   $('#category-field').classList.toggle('full-width-field', !hike);
+  for (const section of [$('#hike-planning'), $('#hike-log')]) {
+    if (!section) continue;
+    section.hidden = !hike;
+    for (const input of section.querySelectorAll('input, select, textarea')) input.disabled = !hike;
+  }
+  const camping = $('#backpacking-fields');
+  if (camping) camping.hidden = camping.disabled = field('category').value !== 'backpacking';
+  const noticeButton = $('#build-hike-notice');
+  if (noticeButton) {
+    noticeButton.hidden = !hike;
+    if (!hike) $('#hike-notice-preview').hidden = true;
+  }
   renderPeaks();
 }
 
 function renderPeaks() {
-  $('#peaks').innerHTML = [...new Set(names(field('name').value))].map(name =>
+  $('#peaks').innerHTML = certificationPoints({name:field('name').value, peakNames:field('peakNames')?.value}).map(name =>
     `<label class="checkrow"><input type="checkbox" value="${escape(name)}" ${checks.has(name) ? 'checked' : ''}> ${escape(name)} 인증 완료</label>`
   ).join('') || '<p class="hint">산 이름을 입력하면 인증 여부를 체크할 수 있어요.</p>';
+}
+
+function mapLink(value) {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function updateMapLink() {
+  const input = field('mapUrl');
+  const link = $('#open-map');
+  const url = mapLink(input.value.trim());
+  input.setCustomValidity(input.value.trim() && !url ? 'http:// 또는 https://로 시작하는 지도 링크를 입력해 주세요.' : '');
+  link.hidden = !url;
+  if (url) link.href = url;
+  else link.removeAttribute('href');
+}
+
+function renderHikePhoto(message = '') {
+  const preview = $('#hike-photo-preview');
+  preview.hidden = $('#remove-hike-photo').hidden = !hikePhoto;
+  if (hikePhoto) preview.src = hikePhoto;
+  else preview.removeAttribute('src');
+  $('#hike-photo-status').textContent = message;
+}
+
+async function loadHikePhoto(event) {
+  const input = event.currentTarget;
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  const request = ++photoRequest;
+  photoLoading = true;
+  renderHikePhoto('사진 불러오는 중…');
+  const url = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1, 640 / Math.max(image.naturalWidth, image.naturalHeight));
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    let photo = canvas.toDataURL('image/jpeg', 0.62);
+    if (photo.length > 180000) photo = canvas.toDataURL('image/jpeg', 0.35);
+    if (!photo.startsWith('data:image/jpeg;base64,') || photo.length > 180000) throw new Error('Invalid photo');
+    if (request === photoRequest && dialog.open) {
+      hikePhoto = photo;
+      renderHikePhoto('사진을 첨부했어요. 저장하면 일정에 남아요.');
+    }
+  } catch {
+    if (request === photoRequest && dialog.open) renderHikePhoto('사진을 열지 못했어요. JPG 또는 PNG 사진으로 다시 시도해 주세요.');
+  } finally {
+    URL.revokeObjectURL(url);
+    if (request === photoRequest) photoLoading = false;
+  }
+}
+
+function buildHikeNotice() {
+  const record = readScheduleFields();
+  const route = [record.trailhead, record.waypoints, record.summit, record.trailEnd].filter(Boolean).join(' → ');
+  const meetup = [record.meetingTime, record.meetingPlace].filter(Boolean).join(' · ');
+  const lines = [
+    ['일정', record.start && scheduleDate(record, true)],
+    ['지역', record.region], ['집결', meetup], ['지도', mapLink(record.mapUrl)],
+    ['코스', route], ['거리·시간·난이도', hikingMetrics(record)],
+    ['벙주', record.host], ['인원', record.people && record.people+'명'],
+    ['교통', record.transport], ['주차', record.parking], ['차량 회수', record.vehiclePickup],
+    ['숙소', record.lodging], ['예산', record.budget && Number(record.budget).toLocaleString('ko-KR')+'원'],
+    ['인증', [certificationTypes[record.certificationType], certificationPoints(record).join(' · ')].filter(Boolean).join(' · ')],
+    ['준비물', gear.map(item => item.label).filter(Boolean).join(', ')]
+  ];
+  if (record.category === 'backpacking') lines.push(['야영지', record.campsite], ['예약', record.campBooking], ['물 보급', record.waterSource]);
+  $('#hike-notice-text').value = [record.name ? '['+record.name+'] 산행 안내' : '산행 안내',
+    ...lines.filter(([,value]) => value).map(([label,value]) => label+': '+value), record.notice].filter(Boolean).join('\n');
+  $('#hike-notice-preview').hidden = false;
+  $('#hike-notice-status').textContent = '';
+  $('#hike-notice-text').focus();
 }
 
 function renderGear() {
@@ -349,8 +471,13 @@ async function save(statusOverride) {
   const name = field('name').value.trim();
   field('name').setCustomValidity((hike ? names(name).length : name) ? '' : '일정 이름을 입력해 주세요.');
   if (!form.reportValidity()) return;
-  const record = Object.fromEntries(allFields.map(name => [name,field(name).value.trim()]));
-  Object.assign(record,{id:editing.id || crypto.randomUUID(),gear,certified:hike ? [...new Set(names(record.name))].filter(name => checks.has(name)) : []});
+  if (photoLoading) {
+    showEditorError('사진을 불러오는 중이에요. 잠시 뒤 저장해 주세요.');
+    return;
+  }
+  const record = readScheduleFields();
+  if ($('#hike-photo')) record.hikePhoto = hikePhoto;
+  Object.assign(record,{id:editing.id || crypto.randomUUID(),gear,certified:hike ? certificationPoints(record).filter(name => checks.has(name)) : []});
   if (statusOverride) record.status = statusOverride;
   const nextRecords = [...records.filter(item => item.id !== record.id),record];
   const uid = account?.uid;
@@ -465,6 +592,30 @@ $('#current').onclick = () => {
   selectedDay = '';
   renderCalendar();
 };
+if ($('#hike-photo')) {
+  field('peakNames').oninput = renderPeaks;
+  field('mapUrl').oninput = updateMapLink;
+  $('#hike-photo').onchange = loadHikePhoto;
+  $('#remove-hike-photo').onclick = () => {
+    photoRequest++;
+    photoLoading = false;
+    hikePhoto = '';
+    renderHikePhoto('첨부 사진을 제거했어요.');
+  };
+  $('#build-hike-notice').onclick = buildHikeNotice;
+  $('#copy-hike-notice').onclick = async () => {
+    const text = $('#hike-notice-text');
+    const status = $('#hike-notice-status');
+    try {
+      await navigator.clipboard.writeText(text.value);
+      status.textContent = '공지 초안을 복사했어요.';
+    } catch {
+      text.focus();
+      text.select();
+      status.textContent = '선택된 공지 초안을 복사해 주세요.';
+    }
+  };
+}
 field('name').oninput = () => {field('name').setCustomValidity('');renderPeaks();};
 field('start').oninput = field('end').oninput = () => field('end').setCustomValidity('');
 $('#peaks').onchange = ({target}) => {
@@ -489,7 +640,7 @@ $('#gear-name').onkeydown = event => {
 if ($('#delete-schedule')) $('#delete-schedule').onclick = removeSchedule;
 $('#complete').onclick = () => save(editing.status === 'done' ? 'planned' : 'done');
 form.addEventListener('invalid', event => {
-  const details = event.target.closest('#schedule-details');
+  const details = event.target.closest('details');
   if (details) details.open = true;
 },true);
 form.onsubmit = event => {
