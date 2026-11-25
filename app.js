@@ -1159,6 +1159,9 @@ function renderHikeFeed() {
 /* ---- 내 산행 기록 ---- */
 const everestHeight = 8849;
 let recordYear = today.slice(0, 4);
+let stampsExpanded = false;
+const stampsObserver = 'ResizeObserver' in window ? new ResizeObserver(() => layoutStamps()) : null;
+if (!stampsObserver) addEventListener('resize', layoutStamps);
 const recordNumber = value => {
   const number = parseFloat(String(value ?? '').replace(/,/g, ''));
   return Number.isFinite(number) && number > 0 ? number : 0;
@@ -1247,12 +1250,43 @@ function renderHikeRecords(loading) {
       ${stamped.length ? `<ul class="record-stamps">${stamped.map(record => `<li><button type="button" data-record="${escape(record.id)}">
         ${pandaStamp(record, 'collection')}<span>${escape(record.certified.join(' · '))}</span></button></li>`).join('')}</ul>`
         : '<p class="hint">인증까지 마친 산행에는 레서판다 도장이 찍혀요.</p>'}
+      ${stamped.length ? '<button type="button" class="record-stamps-toggle" aria-controls="record-stamps" hidden></button>' : ''}
     </section>`;
+  const stampList = box.querySelector('.record-stamps');
+  if (stampList) {
+    stampList.id = 'record-stamps';
+    stampsObserver?.observe(stampList);
+    layoutStamps();
+  }
+}
+
+// 도장 모음: 실제 한 줄 칸 수 기준으로 두 줄까지만 보여주고 나머지는 펼치기 버튼으로
+function layoutStamps() {
+  const list = $('#hike-records .record-stamps');
+  const toggle = $('#hike-records .record-stamps-toggle');
+  if (!list || !toggle) return;
+  const columns = getComputedStyle(list).gridTemplateColumns.split(' ').filter(Boolean).length;
+  if (!columns || getComputedStyle(list).gridTemplateColumns === 'none') return;
+  const limit = columns * 2;
+  const items = [...list.children];
+  const extra = items.length - limit;
+  items.forEach((item, index) => item.hidden = extra > 0 && !stampsExpanded && index >= limit);
+  toggle.hidden = extra <= 0;
+  toggle.textContent = stampsExpanded ? '도장 접기' : `도장 ${groupNumber(Math.max(extra, 0))}개 더 보기`;
+  toggle.setAttribute('aria-expanded', String(stampsExpanded));
 }
 $('#hike-records')?.addEventListener('click', event => {
+  const toggle = event.target.closest('.record-stamps-toggle');
+  if (toggle) {
+    stampsExpanded = !stampsExpanded;
+    layoutStamps();
+    if (!stampsExpanded) toggle.scrollIntoView({block:'nearest'});
+    return;
+  }
   const year = event.target.closest('[data-record-year]')?.dataset.recordYear;
   if (!year || year === recordYear) return;
   recordYear = year;
+  stampsExpanded = false;
   renderHikeRecords(false);
   $(`[data-record-year="${year}"]`)?.focus();
 });
