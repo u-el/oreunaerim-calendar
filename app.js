@@ -1307,7 +1307,7 @@ function renderHikeFeedIntro(mode) {
   }
   const steps = '<ol class="feed-steps">'+feedSteps.map(([title, text]) =>
     '<li><strong>'+title+'</strong><span>'+text+'</span></li>').join('')+'</ol>';
-  const sample = `<figure class="feed-sample" aria-label="산행 피드 카드 예시">
+  const sample = `<figure class="feed-sample" aria-label="피드 카드 예시">
     <span class="feed-sample-badge">예시</span>
     <img src="crew-hike.jpeg" alt="" loading="lazy" width="320" height="200">
     <figcaption><strong>치악산 비로봉</strong><span>2026. 10. 18. (토)</span>

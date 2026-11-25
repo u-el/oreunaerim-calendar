@@ -430,7 +430,7 @@ body.forest-interface[data-theme]{
 /* 다가오는 일정 D-day */
 .forest-interface .upcoming .d-day{display:inline-block;margin-bottom:6px;padding:3px 10px;border-radius:99px;background:#f3dfaa;color:#3d2f0c;font-size:.82rem;font-weight:800;letter-spacing:.02em}
 
-/* 산행 피드 안내 */
+/* 피드 안내 */
 .hike-feed-intro{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(220px,1fr);gap:20px;align-items:center;margin:14px 0 8px;padding:clamp(16px,3vw,26px);border:1px solid var(--line);border-radius:20px;background:#fff}
 .hike-feed-intro[hidden]{display:none}
 .feed-intro-lead{font-size:clamp(1.05rem,2.6vw,1.25rem);font-weight:700;color:var(--pine);letter-spacing:-.015em}
