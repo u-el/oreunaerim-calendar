@@ -634,3 +634,28 @@ html[data-color=dark] .record-stat strong,html[data-color=dark] .record-highest 
 html[data-color=dark] :is(.record-bar,.record-highest button,.record-stamps button:hover){background:#22392d}
 html[data-color=dark] .record-bars li.is-now .record-bar{background:#3f7a5b}
 html[data-color=dark] .record-years button[aria-pressed=true]{background:#3f7a5b;border-color:#3f7a5b}
+
+/* 디자인 다듬기: 빈 배너, 달력, 필터, 보기 탭 */
+.upcoming.is-empty h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.forest-interface .upcoming .upcoming-add{margin-top:12px;padding:.5rem 1rem;border:0;border-radius:999px;background:#f3dfaa;color:#3d2f0c;font-weight:800}
+.forest-interface .upcoming .upcoming-add:hover{background:#f8e8bf}
+.forest-interface .calendar-layout .day:not(.has-event){background:transparent}
+.forest-interface .calendar-layout .day:not(.has-event):hover{background:color-mix(in srgb,var(--jade) 9%,transparent);box-shadow:none}
+.forest-interface .calendar-layout .day[aria-pressed=true]:not(.has-event){background:var(--pine);color:#fff}
+.calendar-layout .day.has-event{font-weight:800}
+.day-label.is-sun,.day.is-sun:not([aria-pressed=true]) .day-number{color:#c4473a}
+.day-label.is-sat,.day.is-sat:not([aria-pressed=true]) .day-number{color:#2f6db0}
+.day.has-event:is(.is-sun,.is-sat) .day-number{color:inherit}
+.filters select{appearance:none;-webkit-appearance:none;padding:.5rem 2rem .5rem .9rem;border:1px solid var(--line);border-radius:999px;background:var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2352645e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right .8rem center;color:var(--ink);font-weight:600}
+.filters select:hover{border-color:var(--jade)}
+.filters select:focus-visible{outline:2px solid var(--jade);outline-offset:1px}
+.forest-interface .tabs{gap:2px}
+.forest-interface .tabs button{padding:.55rem .7rem;font-size:.92rem;font-weight:600}
+.forest-interface .tabs button[aria-pressed=true]{background:transparent;color:var(--pine);font-weight:800;box-shadow:inset 0 -2px var(--jade)}
+html[data-color=dark] .forest-interface .calendar-layout .day:not(.has-event){background:transparent}
+html[data-color=dark] .forest-interface .calendar-layout .day[aria-pressed=true]:not(.has-event){background:#3f7a5b;color:#fff}
+html[data-color=dark] :is(.day-label.is-sun,.day.is-sun:not([aria-pressed=true]) .day-number){color:#ff8f80}
+html[data-color=dark] :is(.day-label.is-sat,.day.is-sat:not([aria-pressed=true]) .day-number){color:#8dbcf0}
+html[data-color=dark] .day.has-event:is(.is-sun,.is-sat) .day-number{color:inherit}
+html[data-color=dark] .filters select{background:#1a2a22 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%239fb2a7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right .8rem center;border-color:#34483e}
+html[data-color=dark] .forest-interface .tabs button[aria-pressed=true]{background:transparent}

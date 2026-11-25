@@ -1445,7 +1445,9 @@ function renderUpcoming(categories) {
     mascot.src = menu === 'all' ? 'forest-hiker-panda.webp' : 'crew-'+character+'.jpeg';
   }
   container.innerHTML = upcoming ? '<span class="d-day">'+dDayLabel(upcoming)+'</span>'+scheduleCard(upcoming, 'planned')+
-    '<p class="weather-line" id="upcoming-weather" hidden></p>' : '<p class="upcoming-empty">다가오는 일정이 없어요.</p>';
+    '<p class="weather-line" id="upcoming-weather" hidden></p>' :
+    `<p class="upcoming-empty">다음 ${menu === 'all' ? '모임' : menus[menu].label}을 잡아볼까요?</p><button type="button" class="upcoming-add" data-add-schedule>＋ 새 일정</button>`;
+  container.closest('.upcoming')?.classList.toggle('is-empty', !upcoming);
   if (upcoming) showWeather($('#upcoming-weather'), upcoming);
 }
 
@@ -1460,7 +1462,7 @@ function renderCalendar() {
   const leading = new Date(year,index,1).getDay();
   const days = new Date(year,index+1,0).getDate();
   const includes = (record,day) => record.start && record.start <= day && (record.end || record.start) >= day;
-  let html = [...'일월화수목금토'].map(day => `<span class="day-label">${day}</span>`).join('') + '<span></span>'.repeat(leading);
+  let html = [...'일월화수목금토'].map((day, weekday) => `<span class="day-label${weekday === 0 ? ' is-sun' : weekday === 6 ? ' is-sat' : ''}">${day}</span>`).join('') + '<span></span>'.repeat(leading);
   for (let day=1; day<=days; day++) {
     const date = iso(year,index,day);
     const dayRecords = calendarRecords.filter(record => includes(record,date));
@@ -1469,7 +1471,8 @@ function renderCalendar() {
     const kindLabels = kinds.map(kind => calendarKindLabels[kind]).join(', ');
     const fills = kinds.length ? `<span class="day-fills" aria-hidden="true">${kinds.map(kind => `<i class="${kind}"></i>`).join('')}</span>` : '';
     const label = [index+1+'월 '+day+'일', date === today ? '오늘' : '', count ? '일정 '+count+'건 · '+kindLabels : ''].filter(Boolean).join(', ');
-    html += `<button type="button" class="day ${count ? 'has-event' : ''} ${date === today ? 'today' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${label}">${fills}<span class="day-number">${day}</span></button>`;
+    const weekday = (leading + day - 1) % 7;
+    html += `<button type="button" class="day ${count ? 'has-event' : ''} ${date === today ? 'today' : ''} ${weekday === 0 ? 'is-sun' : weekday === 6 ? 'is-sat' : ''}" data-day="${date}" aria-pressed="${date === selectedDay}" aria-label="${label}">${fills}<span class="day-number">${day}</span></button>`;
   }
   $('#calendar').innerHTML = html;
   const events = calendarRecords.filter(record => selectedDay ? includes(record,selectedDay) :
