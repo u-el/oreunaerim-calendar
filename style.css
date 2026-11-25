@@ -97,10 +97,10 @@ body[data-theme="play"]{
   --page:#eff8ff;--line:#c7e2f3;--ink:#173347;--dim:#426175;
   --pine:#164663;--jade:#23678c;--mint:#def2ff;--accent:#a3dafa;--accent-hover:#8bccf4;--soft:#dff2ff;
 }
-body:is([data-theme="food"],[data-theme="play"]) :is(.primary,.logo,.activity-menu button[aria-pressed=true],.day[aria-pressed=true]){
+body:is([data-theme="food"],[data-theme="play"]) :is(.primary,.logo,.day[aria-pressed=true]){
   background:var(--accent);border-color:var(--accent);color:var(--ink);
 }
-body:is([data-theme="food"],[data-theme="play"]) :is(.primary,.activity-menu button[aria-pressed=true],.day[aria-pressed=true]):hover{
+body:is([data-theme="food"],[data-theme="play"]) :is(.primary,.day[aria-pressed=true]):hover{
   background:var(--accent-hover);
 }
 body:is([data-theme="food"],[data-theme="play"]) :is(button:hover,.datebox,.tabs [aria-pressed=true]){
@@ -358,6 +358,8 @@ body.forest-interface[data-theme]{
 .forest-interface .upcoming h1{font-size:1rem;letter-spacing:-.025em;margin:0 0 7px;color:#e2eadb}
 .forest-interface .upcoming-mascot{width:100%;height:auto;aspect-ratio:1;object-fit:cover;border-radius:50%;outline:1px solid #fff7;border:3px solid #f6eeda;box-shadow:0 8px 20px #102b2170}
 .forest-interface .upcoming .schedule-card{display:block;background:transparent;border:0;box-shadow:none;padding:0;color:white;margin:0;text-align:left}
+.forest-interface .upcoming .schedule-card:is(:hover,:active){background:transparent}
+.forest-interface .upcoming .schedule-card,.forest-interface .activity-menu button[data-menu]{-webkit-tap-highlight-color:transparent}
 .forest-interface .upcoming .schedule-date{display:block;color:#f3dfaa;margin-bottom:5px}
 .forest-interface .upcoming .card-title{color:white;font-size:clamp(1.3rem,5.6vw,2.35rem)}
 .forest-interface .upcoming .schedule-card-head{justify-content:start}
