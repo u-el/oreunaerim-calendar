@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=bac-certification-places"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=hike-overview-bac-progress"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -27,6 +27,30 @@
 #bac-connected li { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 #bac-status:empty { display: none; }
 .bac-sources a { color: #225d48; }
+.hike-overview { background: #edf5ed; border: 1px solid #d3e5d7; border-radius: 16px; padding: 14px; display: grid; gap: 10px; }
+.hike-overview[hidden] { display: none; }
+.hike-overview header { border: 0; background: transparent; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; color: var(--pine); }
+.hike-overview h3, .hike-overview dl { margin: 0; }
+.hike-overview h3, .hike-overview dd { overflow-wrap: anywhere; }
+.hike-overview-status { flex: none; background: #dcece1; border-radius: 99px; padding: 3px 8px; font-size: .8rem; font-weight: 700; }
+.hike-overview dl { display: grid; gap: 6px; }
+.hike-overview dl > div { display: grid; grid-template-columns: minmax(75px, 25%) minmax(0, 1fr); gap: 8px; }
+.hike-overview dt { font-size: .82rem; color: #466153; }
+.hike-overview dd { margin: 0; font-size: .88rem; font-weight: 650; }
+.hike-overview-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.hike-overview-actions button, .hike-overview-actions a { min-height: 44px; font-size: .83rem; }
+.hike-overview-actions a { display: inline-grid; place-items: center; padding: 0 10px; border-radius: 9px; background: #fff; color: var(--pine); }
+.hike-overview-actions [hidden], #hike-overview-message:empty { display: none; }
+#editor-sections { display: grid; gap: 10px; min-width: 0; }
+#editor-sections > details { scroll-margin-block: 8px; }
+#certification { display: grid; gap: 9px; }
+#certification-edit > summary { padding: 6px 0; }
+#bac-progress { margin-top: 12px; }
+#bac-progress .details-content { padding-top: 4px; }
+#bac-progress-list { display: grid; gap: 4px; padding: 0; margin: 0; list-style: none; }
+#bac-progress-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #dce6dd; }
+#bac-progress-list li small { display: block; color: #466153; }
+#bac-progress-list button, #bac-progress-more { min-height: 44px; }
 </style>
 <!-- BAC public certification locations, checked 2026-11-25. Cheonseongsan details from the BAC September 12 bus listing. -->
 <script type="application/json" id="bac-catalog">{
@@ -366,6 +390,17 @@
 <section class="certification-overview" aria-labelledby="certification-heading" id="stats" hidden>
 <h2 tabindex="-1" id="certification-heading">인증 현황</h2>
 <div class="certification-cards" id="certification-cards"></div>
+<details class="editor-section" id="bac-progress">
+<summary>BAC 인증지 목록</summary><div class="details-content">
+<div class="form-grid">
+<label>챌린지<select id="bac-progress-type"><option value="classic">명산100</option><option value="plus">명산100+</option><option value="island">섬&amp;산</option></select></label>
+<label>인증 상태<select id="bac-progress-status"><option value="unvisited">미방문</option><option value="planned">예정</option><option value="done">완료</option></select></label>
+<label class="full-width-field">인증지 검색<input id="bac-progress-search" type="search" placeholder="산·봉우리·지역명" maxlength="80"></label>
+</div>
+<p id="bac-progress-count" class="hint" role="status"></p>
+<ul id="bac-progress-list" aria-label="BAC 인증지"></ul>
+<button id="bac-progress-more" type="button" hidden>인증지 더 보기</button>
+</div></details>
 </section>
 <section class="upcoming" aria-labelledby="upcoming-title">
   <div class="upcoming-content">
@@ -399,9 +434,25 @@
   <button id="google-logout" type="button" hidden>로그아웃</button>
 </div><button id="export-backup" type="button">백업 내보내기</button></footer>
 </main>
-<dialog id="editor"><form id="form">
+<dialog id="editor" aria-labelledby="editor-title"><form id="form">
 <div class="dialog-head"><div><span class="eyebrow">일정 기록</span><h2 id="editor-title">산행 상세</h2></div><button id="close" type="button" aria-label="닫기">×</button></div>
 <div class="editor-content">
+<section id="hike-overview" class="hike-overview" aria-labelledby="hike-overview-name" hidden>
+<header><h3 id="hike-overview-name">산행 요약</h3><span id="hike-overview-status" class="hike-overview-status"></span></header>
+<dl id="hike-overview-data"></dl>
+<div class="hike-overview-actions">
+<a id="hike-overview-map" target="_blank" rel="noopener noreferrer" hidden>지도 열기</a>
+<button type="button" data-hike-jump="hike-location">현재 위치 저장</button>
+<button type="button" id="hike-overview-copy">공지 복사</button>
+<button type="button" data-hike-jump="hike-planning" data-hike-phase="planned">집결·코스</button>
+<button type="button" data-hike-jump="schedule-gear" data-hike-phase="planned">준비물</button>
+<button type="button" data-hike-jump="editor-certification" data-hike-phase="done">인증 체크</button>
+<button type="button" data-hike-jump="hike-media" data-hike-phase="done">사진·GPX</button>
+</div>
+<p id="hike-overview-message" class="hint" role="status"></p>
+</section>
+<div id="editor-sections">
+<details class="editor-section" id="schedule-basic" open><summary>기본 정보</summary><div class="details-content">
 <div class="form-grid">
 <label id="category-field">모임 종류<select name="category"><option value="personal">개인 산행</option><option value="club-hike">오르내림 산행</option><option value="backpacking">오르내림 백패킹</option><option value="food">오르내림 먹벙</option><option value="play">오르내림 놀이벙</option><option value="club-other">오르내림 기타</option></select></label>
 <label id="certification-type-field">인증 유형<select name="certificationType"><option value="classic">100대 명산</option><option value="plus">100플러스 명산</option><option value="island">섬앤산</option><option value="undecided">미정</option></select></label>
@@ -415,6 +466,7 @@
 <label>교통수단<select name="transport"><option value="">미정</option><option>자차</option><option>카풀</option><option>대중교통</option><option>버스</option><option>기차</option></select></label>
 <label>일정 상태<select name="status"><option value="planned">예정</option><option value="done">완료</option></select></label>
 </div>
+</div></details>
 <details class="editor-section" id="hike-planning" hidden>
 <summary>산행 코스와 집결</summary><div class="details-content">
 <fieldset id="hike-fields"><legend>산행 코스</legend><div class="form-grid">
@@ -464,6 +516,8 @@
 <label>헷갈린 갈림길<input name="junctionNotes" maxlength="240"></label>
 <label>막차·하산 교통<input name="returnNotes" maxlength="240"></label>
 </div></fieldset>
+</div></details>
+<details class="editor-section" id="hike-media" hidden><summary>사진·GPX</summary><div class="details-content">
 <fieldset><legend>GPX 경로</legend>
 <label>GPX 가져오기<input type="file" id="hike-track" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
 <p class="hint">경로 미리보기와 계산한 수치가 일정에 저장돼요. 거리나 상승고도를 직접 입력하면 그 값으로 비교해요.</p>
@@ -476,27 +530,32 @@
 <img id="hike-photo-preview" alt="첨부한 산행 사진" hidden>
 <button type="button" id="remove-hike-photo" hidden>첨부 사진 제거</button>
 </div></details>
-<fieldset id="certification"><legend>인증 기록</legend>
+<details class="editor-section" id="editor-certification" hidden><summary>인증 기록</summary><div class="details-content" id="certification">
+<div id="peaks"></div>
+<details id="certification-edit" open><summary>인증지 선택·수정</summary>
 <div class="bac-picker">
 <label>BAC 인증지 검색<input type="search" id="bac-search" aria-controls="bac-results" placeholder="산·봉우리·지역명 (예: 치악산, 선유도)" autocomplete="off" maxlength="80"></label>
 <p id="bac-status" class="hint" role="status"></p><ul id="bac-results" aria-label="BAC 인증지 검색 결과"></ul>
 <ul id="bac-connected" aria-label="연결한 BAC 인증지" hidden></ul>
 <p class="hint bac-sources">BAC 공식 목록 · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/114" target="_blank" rel="noopener noreferrer">명산100</a> · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/172" target="_blank" rel="noopener noreferrer">명산100+</a> · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/158" target="_blank" rel="noopener noreferrer">섬&amp;산</a></p>
-</div><label>인증 포인트<input name="peakNames" placeholder="예) 월영산 · 선유봉" maxlength="600"></label><p class="hint">포인트 여러 개는 가운데점(·)으로 구분해요. 비워두면 산 이름을 사용해요.</p><div id="peaks"></div></fieldset>
-<details id="schedule-details"><summary>세부 정보</summary>
+</div><label>인증 포인트<input name="peakNames" placeholder="예) 월영산 · 선유봉" maxlength="600"></label><p class="hint">포인트 여러 개는 가운데점(·)으로 구분해요. 비워두면 산 이름을 사용해요.</p></details></div></details>
+<details class="editor-section" id="schedule-gear"><summary>준비물 체크</summary><div class="details-content"><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div></div></details>
+<details class="editor-section" id="schedule-notice"><summary>공지 초안</summary><div class="details-content">
+<label>공지사항 초안<textarea name="notice" rows="5" placeholder="집결 장소, 출발 시간, 코스, 준비물 등을 적어두세요."></textarea></label>
+<button type="button" id="build-hike-notice" hidden>산행 정보로 공지 미리보기</button>
+<div id="hike-notice-preview" hidden><label>벙 공지 미리보기<textarea id="hike-notice-text" rows="8" readonly></textarea></label><button type="button" id="copy-hike-notice">공지 복사</button><p id="hike-notice-status" role="status" class="hint"></p></div>
+</div></details>
+<details class="editor-section" id="schedule-details"><summary>세부 정보</summary>
 <div class="details-content">
 <div class="form-grid">
 <label>숙소<input name="lodging" placeholder="미정"></label>
 <label>숙박 여부<select name="overnight"><option value="">미정</option><option>숙박</option><option>숙박 없음</option></select></label>
 <label>예산 (원)<input name="budget" type="number" min="0" placeholder="미정"></label>
 </div>
-<fieldset><legend>준비물 체크</legend><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div></fieldset>
 <label>메모<textarea name="memo" rows="2" placeholder="이동 시간, 코스, 식사 등"></textarea></label>
-<label>공지사항 초안<textarea name="notice" rows="5" placeholder="집결 장소, 출발 시간, 코스, 준비물 등을 적어두세요."></textarea></label>
-<button type="button" id="build-hike-notice" hidden>산행 정보로 공지 미리보기</button>
-<div id="hike-notice-preview" hidden><label>벙 공지 미리보기<textarea id="hike-notice-text" rows="8" readonly></textarea></label><button type="button" id="copy-hike-notice">공지 복사</button><p id="hike-notice-status" role="status" class="hint"></p></div>
 </div>
 </details>
+</div>
 </div>
 <div class="dialog-actions"><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
 </form></dialog>
