@@ -137,6 +137,10 @@ async function run(browser, base, width) {
   check(`${label} 일정 상세: 더보기 열림`, await page.evaluate(() => document.querySelector('#more-actions').open));
   await page.click('#editor-title');
   check(`${label} 일정 상세: 바깥 누르면 더보기 닫힘`, !(await page.evaluate(() => document.querySelector('#more-actions').open)));
+  await page.click('#more-actions summary');
+  await page.keyboard.press('Escape');
+  const esc = await page.evaluate(() => [document.querySelector('#more-actions').open, document.querySelector('#editor').open]);
+  check(`${label} 일정 상세: Esc는 더보기만 닫음`, !esc[0] && esc[1], JSON.stringify(esc));
   await page.evaluate(() => document.querySelector('#editor').close());
 
   // 피드: 내 산행 기록

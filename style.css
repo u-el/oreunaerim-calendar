@@ -798,3 +798,24 @@ html[data-color=dark] #schedule-share-close{background:#1a2a22}
 /* 접힌 칸 화살표는 항상 오른쪽 끝 */
 .editor-section>summary::after{margin-left:auto}
 .editor-section>summary:has(.section-meta:not(:empty))::after{margin-left:8px}
+
+/* 디자인 다듬기 5 */
+/* 산행 검색: 산행 일정 목록 위 */
+.records .hike-search{margin:0 0 14px}
+/* PC 인증 현황 카드: 글자 왼쪽, 산 그림 오른쪽으로 낮게 */
+@media(min-width:821px){
+  .forest-interface .certification-count{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"label meter" "count meter" "left meter";align-items:center;column-gap:18px;row-gap:2px;padding:14px 16px}
+  .certification-count .certification-label{grid-area:label}
+  .certification-count strong{grid-area:count}
+  .certification-count .summit-meter{grid-area:meter;height:64px;align-self:end;margin:0}
+  .certification-count .summit-left{grid-area:left}
+}
+/* 짧은 링크 불러오는 동안 카드 모양 */
+.share-card.is-loading{gap:10px}
+.share-card.is-loading i{display:block;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--line) 25%,color-mix(in srgb,var(--line) 40%,var(--white)) 50%,var(--line) 75%);background-size:200% 100%;animation:share-shimmer 1.2s linear infinite}
+.share-card.is-loading i:nth-child(1){width:55%;height:22px}
+.share-card.is-loading i:nth-child(2){width:40%}
+.share-card.is-loading i:nth-child(3){width:70%}
+.share-card.is-loading i:nth-child(4){width:85%;margin-top:6px}
+@keyframes share-shimmer{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.share-card.is-loading i{animation:none}}

@@ -748,7 +748,8 @@ function initScheduleShare() {
     const request = ++incoming;
     showScheduleShare('receive', null);
     $('#schedule-share-title').textContent = '공유 일정';
-    $('#schedule-share-status').textContent = '공유 일정을 불러오는 중…';
+    $('#schedule-share-status').textContent = '';
+    $('#schedule-share-data').innerHTML = '<article class="share-card is-loading" aria-busy="true" aria-label="공유 일정을 불러오는 중"><i></i><i></i><i></i><i></i></article>';
     let record = null;
     let failed = false;
     try {
@@ -758,9 +759,12 @@ function initScheduleShare() {
     } catch { failed = true; }
     if (request !== incoming || location.hash.indexOf(id) < 0) return;
     if (record) showScheduleShare('receive', record);
-    else $('#schedule-share-status').textContent = failed
+    else {
+      $('#schedule-share-data').replaceChildren();
+      $('#schedule-share-status').textContent = failed
       ? '공유 일정을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.'
       : '공유 일정을 찾을 수 없어요. 링크가 끝까지 복사됐는지 확인해 주세요.';
+    }
   };
   window.addEventListener('hashchange', openIncoming);
   openIncoming();
@@ -2852,6 +2856,21 @@ if (moreActions) {
   menu.addEventListener('click', () => moreActions.open = false);
   document.addEventListener('click', event => { if (moreActions.open && !moreActions.contains(event.target)) moreActions.open = false; });
   dialog.addEventListener('close', () => moreActions.open = false);
+  // Esc는 열린 더보기 메뉴만 닫고 상세 창은 그대로 둠
+  dialog.addEventListener('cancel', event => {
+    if (!moreActions.open) return;
+    event.preventDefault();
+    moreActions.open = false;
+    moreActions.querySelector('summary').focus();
+  });
+  dialog.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && moreActions.open) {
+      event.preventDefault();
+      event.stopPropagation();
+      moreActions.open = false;
+      moreActions.querySelector('summary').focus();
+    }
+  }, true);
 }
 
 /* 일정 상세: 접힌 칸 제목 옆 요약 */
