@@ -3,10 +3,24 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=hike-notice-emoji"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=hike-gps-gpx"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
+<style>
+.hike-pin-list, .hike-track-preview { display: grid; gap: 8px; }
+.hike-pin { display: grid; gap: 4px; padding: 8px 0; }
+.hike-pin + .hike-pin { border-top: 1px solid #dce6dd; }
+.hike-pin-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hike-pin-actions a { padding: 8px 4px; color: #225d48; }
+.hike-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.hike-chart { display: block; width: 100%; height: auto; min-height: 72px; border-radius: 8px; background: #edf4ed; color: #23674e; }
+.hike-chart-elevation { background: #f3f1e8; color: #685726; }
+.hike-feed-card .hike-track-preview { display: grid; gap: 4px; padding: 12px 12px 0; }
+.hike-comparison { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.hike-comparison td, .hike-comparison th { border-bottom: 1px solid #dce6dd; text-align: left; padding: 6px 4px; }
+#hike-track-file { overflow-wrap: anywhere; }
+</style>
 </head>
 <body class="forest-interface">
 <header><div class="shell top"><a href="./" class="brand"><img class="brand-mascot" src="oreunaerim-calendar-192.png" alt="" width="36" height="36"> 오르내림 캘린더</a><button class="primary" id="add">＋ 새 일정</button></div></header>
@@ -80,6 +94,7 @@
 <label>날머리<input name="trailEnd" maxlength="150"></label>
 <label>코스 유형<select name="routeType"><option value="">미정</option><option>왕복</option><option>원점회귀</option><option>종주</option><option>편도</option></select></label>
 <label>거리 (km)<input type="number" name="distance" min="0.1" step="0.1"></label>
+<label>예상 누적 상승고도 (m)<input type="number" name="plannedAscent" min="0" step="1" max="99999"></label>
 <label>예상 소요시간<input name="estimatedTime" placeholder="예) 3시간 30분" maxlength="80"></label>
 <label>난이도<select name="difficulty"><option value="">미정</option><option>하</option><option>중</option><option>상</option></select></label>
 </div></fieldset>
@@ -97,11 +112,35 @@
 <label class="full-width-field">물 보급 위치<input name="waterSource" maxlength="150"></label>
 </div></fieldset>
 </div></details>
+<details class="editor-section" id="hike-location" hidden>
+<summary>📍 현재 위치 저장</summary><div class="details-content">
+<p class="hint">현장에서 들머리·정상·날머리 위치를 찍고, 아래 저장 버튼을 눌러 일정에 남기세요.</p>
+<div id="hike-pin-list" class="hike-pin-list"></div>
+<p id="hike-pin-status" class="hint" role="status"></p>
+</div></details>
 <details class="editor-section" id="hike-log" hidden>
 <summary>산행 기록</summary><div class="details-content">
 <label>실제 소요시간<input name="actualTime" placeholder="예) 4시간 10분" maxlength="80"></label>
+<div class="form-grid">
+<label>실제 거리 (km)<input name="actualDistance" type="number" min="0" step="0.01" max="9999"></label>
+<label>실제 누적 상승고도 (m)<input name="actualAscent" type="number" min="0" step="1" max="99999"></label>
+</div>
+<fieldset><legend>계획과 실제 비교</legend><div id="hike-comparison"></div></fieldset>
 <label>실제로 걸은 코스<textarea name="actualRoute" rows="2" maxlength="2000"></textarea></label>
 <label>다음 산행 참고 메모<textarea name="hikeNotes" rows="2" maxlength="2000"></textarea></label>
+<fieldset><legend>코스별 현장 메모</legend><div class="form-grid">
+<label>화장실·식수 위치<input name="facilityNotes" maxlength="240"></label>
+<label>주차장·만차 시간<input name="parkingNotes" maxlength="240"></label>
+<label>헷갈린 갈림길<input name="junctionNotes" maxlength="240"></label>
+<label>막차·하산 교통<input name="returnNotes" maxlength="240"></label>
+</div></fieldset>
+<fieldset><legend>GPX 경로</legend>
+<label>GPX 가져오기<input type="file" id="hike-track" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
+<p class="hint">경로 미리보기와 계산한 수치가 일정에 저장돼요. 거리나 상승고도를 직접 입력하면 그 값으로 비교해요.</p>
+<p class="hint" id="hike-track-file"></p><div id="hike-track-preview"></div>
+<p class="hint" id="hike-track-status" role="status"></p>
+<button type="button" id="remove-hike-track" hidden>GPX 경로 제거</button>
+</fieldset>
 <label>산행 사진 1장<input type="file" id="hike-photo" accept="image/*"></label>
 <p role="status" id="hike-photo-status" class="hint"></p>
 <img id="hike-photo-preview" alt="첨부한 산행 사진" hidden>
