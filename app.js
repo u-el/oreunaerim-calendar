@@ -68,6 +68,8 @@ let month = new Date(today.slice(0,7)+'-01T00:00:00');
 let selectedDay = '';
 let view = 'planned';
 let menu = 'all';
+let showingHikeFeed = false;
+const hasHikePhoto = record => /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(record.hikePhoto || '');
 const crewMascots = ['glasses', 'hike', 'picnic', 'grill', 'ribbon', 'snack'];
 const crewMascotIndex = {hike:5, food:1, play:3};
 let editing;
@@ -125,11 +127,22 @@ function render() {
   const active = menus[menu];
   document.body.dataset.theme = menu;
   document.querySelectorAll('[data-menu]').forEach(button => {
-    button.setAttribute('aria-pressed', button.dataset.menu === menu);
+    button.setAttribute('aria-pressed', !showingHikeFeed && button.dataset.menu === menu);
   });
-  $('#stats').hidden = menu !== 'hike';
+  $('#stats').hidden = showingHikeFeed || menu !== 'hike';
   const shortcut = $('#certification-shortcut');
-  if (shortcut) shortcut.hidden = menu !== 'all';
+  if (shortcut) shortcut.hidden = showingHikeFeed || menu !== 'all';
+  const feed = $('#hike-feed');
+  if (feed) {
+    feed.hidden = !showingHikeFeed;
+    $('#hike-feed-tab').setAttribute('aria-pressed', showingHikeFeed);
+    $('.upcoming').hidden = $('.calendar-layout').hidden = showingHikeFeed;
+    if (showingHikeFeed) {
+      renderHikeFeed();
+      return;
+    }
+    $('#hike-feed-cards').replaceChildren();
+  }
   $('[data-view="certified"]').hidden = menu !== 'hike' && menu !== 'all';
   $('#record-heading').textContent = active.label + ' 일정';
   const categoryFilter = $('#category-filter');
@@ -182,6 +195,25 @@ const calendarKind = record => {
   return isHike(category) ? 'hike' : 'play';
 };
 const calendarDot = kind => `<i class="calendar-dot ${kind}" aria-hidden="true"></i>`;
+
+function renderHikeFeed() {
+  const posts = account && cloudReady ? records.filter(record => record.status === 'done' &&
+    isHike(categoryOf(record)) && hasHikePhoto(record)).sort((first, second) =>
+      (second.start || '').localeCompare(first.start || '') || (second.end || '').localeCompare(first.end || '')) : [];
+  const message = $('#hike-feed-message');
+  message.hidden = posts.length > 0;
+  message.textContent = !account ? 'Google 계정으로 로그인하면 내 산행 사진을 볼 수 있어요.' :
+    !cloudReady ? $('#sync-status').textContent : '완료한 산행이나 백패킹 일정에 사진을 저장하면 여기에 나타나요.';
+  $('#hike-feed-cards').innerHTML = posts.map(record => `
+    <button type="button" class="hike-feed-card" data-record="${escape(record.id)}">
+      <img src="${escape(record.hikePhoto)}" alt="" loading="lazy" decoding="async">
+      <span class="hike-feed-card-body">
+        <strong>${escape(record.name)}</strong>
+        <span>${escape(scheduleDate(record, true))}${record.actualTime ? ' · '+escape(record.actualTime) : ''}</span>
+        ${isCompletedCertification(record) ? '<span class="schedule-status status-certified">인증 완료</span>' : ''}
+      </span>
+    </button>`).join('');
+}
 
 function scheduleDate(record, includeYear) {
   if (!record.start) return '날짜 미정';
@@ -276,7 +308,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   if ($('#hike-photo')) {
     photoRequest++;
     photoLoading = false;
-    hikePhoto = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(record.hikePhoto || '') ? record.hikePhoto : '';
+    hikePhoto = hasHikePhoto(record) ? record.hikePhoto : '';
     $('#hike-photo').value = '';
     $('#hike-planning').open = false;
     $('#hike-log').open = false;
@@ -537,7 +569,8 @@ dialog.addEventListener('close', () => form.querySelector('.save-error')?.remove
 $('#filter').onchange = $('#category-filter').onchange = $('#certification-filter').onchange = render;
 $('.activity-menu').onclick = event => {
   const button = event.target.closest('[data-menu]');
-  if (!button || button.dataset.menu === menu) return;
+  if (!button || (!showingHikeFeed && button.dataset.menu === menu)) return;
+  showingHikeFeed = false;
   menu = button.dataset.menu;
   if (Object.hasOwn(crewMascotIndex, menu)) {
     crewMascotIndex[menu] = (crewMascotIndex[menu] + 1) % crewMascots.length;
@@ -548,6 +581,15 @@ $('.activity-menu').onclick = event => {
   $('#certification-filter').value = '';
   render();
 };
+const feedTab = $('#hike-feed-tab');
+if (feedTab) {
+  feedTab.hidden = false;
+  feedTab.onclick = () => {
+    if (showingHikeFeed) return;
+    showingHikeFeed = true;
+    render();
+  };
+}
 const certificationShortcut = $('#certification-shortcut');
 if (certificationShortcut) certificationShortcut.onclick = () => {
   $('[data-menu="hike"]').click();
@@ -571,7 +613,11 @@ document.addEventListener('click',event => {
     return;
   }
   const button = event.target.closest('[data-record]');
-  if (button) openEditor(records.find(record => record.id === button.dataset.record));
+  if (!button) return;
+  const record = records.find(item => item.id === button.dataset.record);
+  if (!record) return;
+  openEditor(record);
+  if (button.classList.contains('hike-feed-card')) $('#hike-log').open = true;
 });
 $('#calendar').onclick = event => {
   const day = event.target.closest('[data-day]');
@@ -692,6 +738,7 @@ function changeAccount(user) {
   }, () => {
     cloudReady = false;
     status.textContent = '계정 일정에 연결할 수 없어요.';
+    if (showingHikeFeed) render();
   });
 }
 
