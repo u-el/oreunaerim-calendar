@@ -405,7 +405,7 @@ body.forest-interface[data-theme]{
 #hike-notice-preview{display:grid;gap:8px}
 
 .forest-interface .activity-menu:has(#hike-feed-tab:not([hidden])){grid-template-columns:repeat(5,minmax(0,1fr))}
-.forest-interface .activity-menu #hike-feed-tab{border:0;border-radius:999px;background:transparent;color:var(--ink);padding-inline:2px;font-size:.9rem;white-space:nowrap}
+.forest-interface .activity-menu #hike-feed-tab{border:0;border-radius:999px;background:transparent;color:var(--ink);padding-inline:2px;white-space:nowrap}
 .forest-interface .activity-menu #hike-feed-tab[aria-pressed=true]{background:var(--pine);color:white}
 .hike-feed{margin:16px 0 24px}
 .hike-feed h1{font-size:clamp(1.45rem,5vw,2.2rem);letter-spacing:-.025em}
@@ -416,7 +416,7 @@ body.forest-interface[data-theme]{
 .hike-feed-card-body{display:grid;gap:5px;padding:12px 15px;color:var(--dim);overflow-wrap:anywhere}
 .hike-feed-card-body strong{font-size:1.15rem;color:var(--ink)}
 .hike-feed-card-body .schedule-status{justify-self:start}
-@media(max-width:360px){.forest-interface .activity-menu:has(#hike-feed-tab:not([hidden])){gap:2px}.forest-interface .activity-menu #hike-feed-tab{font-size:.8rem;padding-inline:0}}
+@media(max-width:360px){.forest-interface .activity-menu:has(#hike-feed-tab:not([hidden])){gap:2px}.forest-interface .activity-menu #hike-feed-tab{padding-inline:0}}
 
 /* 로그인 안내 배너 */
 .account-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 16px;padding:14px 16px;border:1px solid #d3e5d7;border-left:4px solid var(--jade);border-radius:14px;background:#fff}
