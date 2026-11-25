@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=schedule-sharing"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=google-login-browser-help"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -89,6 +89,9 @@
 #schedule-share-dialog button { min-height: 44px; }
 #schedule-share-status:empty { display: none; }
 #editor:has(.editor-content) .dialog-actions { flex-wrap: wrap; }
+.login-browser-help { flex-basis: 100%; padding: 10px; margin-block: 6px; border-radius: 10px; background: #ecf4ed; }
+.login-browser-help p { margin: 0 0 8px; }
+.login-browser-help input { width: 100%; margin-top: 8px; }
 </style>
 <!-- BAC public certification locations, checked 2026-11-25. Cheonseongsan details from the BAC September 12 bus listing. -->
 <script type="application/json" id="bac-catalog">{
@@ -476,6 +479,7 @@
 <footer><div class="sync-panel" aria-label="계정 동기화">
   <span id="sync-status" role="status">이 브라우저에 저장 중</span>
   <button id="google-login" type="button" hidden>Google로 로그인</button>
+  <div class="login-browser-help" id="calendar-login-help" data-login-help hidden><p role="status"></p><button type="button">브라우저에서 열 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
   <button id="import-local" type="button" hidden>이 브라우저의 일정 가져오기</button>
   <button id="google-logout" type="button" hidden>로그아웃</button>
 </div><button id="export-backup" type="button">백업 내보내기</button></footer>
@@ -616,6 +620,7 @@
   <p class="hint" id="schedule-share-note"></p>
   <dl id="schedule-share-data"></dl>
   <p id="schedule-share-status" role="status"></p>
+  <div class="login-browser-help" id="share-login-help" data-login-help hidden><p role="status"></p><button type="button">브라우저에서 열 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
   <button type="button" class="primary" id="schedule-share-copy" hidden>공유 링크 복사</button>
   <button type="button" class="primary" id="schedule-share-save" hidden>내 캘린더에 담기</button>
   <label id="schedule-share-url-row" hidden>공유 링크<input type="url" id="schedule-share-url" readonly></label>
