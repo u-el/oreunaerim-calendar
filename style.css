@@ -769,3 +769,4 @@ footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start
 footer .sync-panel{display:contents}
 .footer-break{flex-basis:100%;height:0}
 footer #export-backup{margin-left:0}
+.app-version{flex-basis:100%;font-size:.72rem;color:var(--dim);opacity:.7}

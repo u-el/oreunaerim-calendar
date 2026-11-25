@@ -470,7 +470,8 @@ function showScheduleShare(mode, record) {
   const from = mode === 'send' ? (account ? nickname : '') : sharedFrom;
   $('#schedule-share-title').textContent = mode === 'send' ? '일정 공유하기' : from ? `${from}님이 공유한 일정` : '공유 일정';
   $('#schedule-share-note').textContent = mode === 'send'
-    ? '저장된 일정의 아래 내용이 공유돼요. 링크를 받은 사람은 누구나 볼 수 있어요.' + (from ? ` 보낸 사람으로 내 닉네임(${from})이 함께 보여요.` : '')
+    ? '저장된 일정의 아래 내용이 공유돼요. 링크를 받은 사람은 누구나 볼 수 있어요.' + (from ? ` 보낸 사람으로 내 닉네임(${from})이 함께 보여요.`
+      : account ? ' 닉네임을 설정하면 받는 사람에게 보낸 사람이 표시돼요. (맨 아래 "닉네임 설정")' : ' 로그인하고 닉네임을 설정하면 받는 사람에게 보낸 사람이 표시돼요.')
     : '공유 당시 일정이에요. 담으면 내 캘린더에 예정 일정으로 저장돼요.';
   $('#schedule-share-copy').hidden = mode !== 'send';
   $('#schedule-share-save').hidden = mode !== 'receive';
@@ -2773,3 +2774,7 @@ function renderSectionMeta() {
   });
 }
 for (const type of ['input', 'change', 'click']) $('#form')?.addEventListener(type, renderSectionMeta);
+
+/* 맨 아래 앱 버전 표시 (새 버전이 열렸는지 확인용) */
+const appVersion = new URL(document.querySelector('script[src*="app.js"]')?.src || location.href).searchParams.get('v');
+if (appVersion && $('footer')) $('footer').insertAdjacentHTML('beforeend', `<small class="app-version">버전 ${escape(appVersion)}</small>`);
