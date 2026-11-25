@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=feed-login-ics-merged"><script defer src="app.js?v=feed-login-ics-merged"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=convenience-pack"><script defer src="app.js?v=convenience-pack"></script>
+<script>try{var c=localStorage.getItem('oreunaerim:color-scheme');document.documentElement.dataset.color=(c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}</script>
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="오르내림">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -418,7 +420,7 @@
 }</script>
 </head>
 <body class="forest-interface">
-<header><div class="shell top"><a href="./" class="brand"><img class="brand-mascot" src="oreunaerim-calendar-192.png" alt="" width="36" height="36"> 오르내림 캘린더</a><button class="primary" id="add">＋ 새 일정</button></div></header>
+<header><div class="shell top"><a href="./" class="brand"><img class="brand-mascot" src="oreunaerim-calendar-192.png" alt="" width="36" height="36"> 오르내림 캘린더</a><div class="top-actions"><button type="button" id="color-toggle" class="icon-button" aria-pressed="false" aria-label="어두운 화면으로 바꾸기">🌙</button><button class="primary" id="add">＋ 새 일정</button></div></div></header>
 <main class="shell">
 <nav class="activity-menu" aria-label="일정 메뉴">
 <button data-menu="all" aria-pressed="true">전체</button>
@@ -487,6 +489,11 @@
   <div id="hike-feed-intro" class="hike-feed-intro" hidden></div>
   <div id="hike-feed-cards" class="hike-feed-cards"></div>
 </section>
+<aside id="install-card" class="install-card" aria-labelledby="install-title" hidden>
+  <img src="oreunaerim-calendar-192.png" alt="" width="44" height="44">
+  <div><strong id="install-title">홈 화면에 오르내림 추가하기</strong><p id="install-steps"></p></div>
+  <div class="install-actions"><button type="button" class="primary" id="install-action" hidden>앱으로 설치</button><button type="button" id="install-close" aria-label="설치 안내 닫기">닫기</button></div>
+</aside>
 <footer><div class="sync-panel" aria-label="계정 동기화">
   <span id="sync-status" role="status">이 브라우저에 저장 중</span>
   <button id="google-login" type="button" hidden>Google로 로그인</button>
@@ -501,6 +508,7 @@
 <section id="hike-overview" class="hike-overview" aria-labelledby="hike-overview-name" hidden>
 <header><h3 id="hike-overview-name">산행 요약</h3><span id="hike-overview-status" class="hike-overview-status"></span></header>
 <dl id="hike-overview-data"></dl>
+<p class="weather-line" id="hike-overview-weather" hidden></p>
 <div class="hike-overview-actions">
 <a id="hike-overview-map" target="_blank" rel="noopener noreferrer" hidden>지도 열기</a>
 <button type="button" data-hike-jump="hike-location">현재 위치 저장</button>
@@ -600,7 +608,7 @@
 <ul id="bac-connected" aria-label="연결한 BAC 인증지" hidden></ul>
 <p class="hint bac-sources">BAC 공식 목록 · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/114" target="_blank" rel="noopener noreferrer">명산100</a> · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/172" target="_blank" rel="noopener noreferrer">명산100+</a> · <a href="https://bac.blackyak.com/BAC/ChallengeProgram/158" target="_blank" rel="noopener noreferrer">섬&amp;산</a></p>
 </div><label>인증 포인트<input name="peakNames" placeholder="예) 월영산 · 선유봉" maxlength="600"></label><p class="hint">포인트 여러 개는 가운데점(·)으로 구분해요. 비워두면 산 이름을 사용해요.</p></details></div></details>
-<details class="editor-section" id="schedule-gear"><summary>준비물 체크</summary><div class="details-content"><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div></div></details>
+<details class="editor-section" id="schedule-gear"><summary>준비물 체크</summary><div class="details-content"><div class="gear-presets" id="gear-presets" aria-label="준비물 세트 추가"><span class="hint">세트로 추가</span><button type="button" data-gear-preset="day">당일치기</button><button type="button" data-gear-preset="winter">겨울 산행</button><button type="button" data-gear-preset="backpacking">백패킹</button><button type="button" data-gear-preset="safety">비상용품</button></div><div id="gear"></div><div class="inline"><input id="gear-name" aria-label="새 준비물" placeholder="준비물 입력"><button type="button" id="gear-add">추가</button></div></div></details>
 <details class="editor-section" id="schedule-notice"><summary>공지 초안</summary><div class="details-content">
 <label>공지사항 초안<textarea name="notice" rows="5" placeholder="집결 장소, 출발 시간, 코스, 준비물 등을 적어두세요."></textarea></label>
 <button type="button" id="build-hike-notice" hidden>산행 정보로 공지 미리보기</button>
@@ -618,7 +626,7 @@
 </details>
 </div>
 </div>
-<div class="dialog-actions"><button type="button" id="share-schedule" hidden>일정 공유하기</button><button type="button" id="export-ics" hidden>내 캘린더 앱에 추가</button><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
+<div class="dialog-actions"><button type="button" id="share-schedule" hidden>일정 공유하기</button><button type="button" id="export-ics" hidden>내 캘린더 앱에 추가</button><button type="button" id="duplicate-schedule" hidden>복제해서 새 일정</button><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
 </form></dialog>
 <div role="status" id="toast"></div>
 <dialog id="photo-album" aria-labelledby="photo-album-title">

@@ -4,8 +4,8 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f5f7",
-  "theme_color": "#333e4d",
+  "background_color": "#f7f4eb",
+  "theme_color": "#193e30",
   "icons": [
     {
       "src": "oreunaerim-calendar-192.png",

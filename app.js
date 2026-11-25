@@ -261,6 +261,7 @@ function countCertifiedPeaks(type) {
   return count;
 }
 
+let overviewWeatherTimer = 0;
 function renderHikeOverview() {
   const overview = $('#hike-overview');
   if (!overview) return;
@@ -281,6 +282,8 @@ function renderHikeOverview() {
   ];
   $('#hike-overview-data').innerHTML = rows.filter(([, value]) => value).map(([label, value]) =>
     '<div><dt>'+escape(label)+'</dt><dd>'+escape(value)+'</dd></div>').join('');
+  clearTimeout(overviewWeatherTimer);
+  overviewWeatherTimer = setTimeout(() => showWeather($('#hike-overview-weather'), {...record, hikePins:editing.hikePins}), 600);
   const map = $('#hike-overview-map');
   const url = mapLink(record.mapUrl);
   map.hidden = !url;
@@ -660,6 +663,16 @@ function initBacProgress() {
   };
 }
 
+function summitMeter(percent, type) {
+  const ridge = 'M0 60 L14 44 L24 50 L40 26 L52 36 L66 8 L80 30 L92 22 L108 42 L120 36 L120 60 Z';
+  const level = 60 - percent * 0.52;
+  return `<svg class="summit-meter" viewBox="0 -8 120 68" preserveAspectRatio="none" aria-hidden="true">
+    <defs><clipPath id="meter-${type}"><rect x="0" y="${level}" width="120" height="${60 - level}"/></clipPath></defs>
+    <path class="summit-meter-bg" d="${ridge}"/><path class="summit-meter-fill" d="${ridge}" clip-path="url(#meter-${type})"/>
+    ${percent > 0 && percent < 100 ? `<line class="summit-meter-line" vector-effect="non-scaling-stroke" x1="0" x2="120" y1="${level}" y2="${level}"/>` : ''}
+    ${percent >= 100 ? '<path class="summit-flag" d="M66 8 V-6 L76 -2 L66 2"/>' : ''}</svg>`;
+}
+
 function renderCertification() {
   const cards = $('#certification-cards');
   if (!cards) return;
@@ -670,7 +683,8 @@ function renderCertification() {
     return `<button type="button" class="certification-count${count >= goal ? ' is-complete' : ''}" data-certification-list="${type}" aria-controls="bac-progress" aria-label="${certificationTypes[type]} ${count} / ${goal}좌, 완료 목록 열기">
       <span class="certification-label">${certificationTypes[type]}${count >= goal ? '<span class="completion-badge">완등</span>' : ''}</span>
       <strong>${count}<small> / ${goal}좌</small></strong>
-      <span class="bar" aria-hidden="true"><i style="width:${percent}%"></i></span></button>`;
+      ${summitMeter(percent, type)}
+      <span class="summit-left">${count >= goal ? '모든 인증지 완등!' : '정상까지 '+(goal - count)+'좌'}</span></button>`;
   }).join('');
 }
 
@@ -1261,7 +1275,9 @@ function renderUpcoming(categories) {
     const character = crewMascots[crewMascotIndex[menu]];
     mascot.src = menu === 'all' ? 'forest-hiker-panda.webp' : 'crew-'+character+'.jpeg';
   }
-  container.innerHTML = upcoming ? '<span class="d-day">'+dDayLabel(upcoming)+'</span>'+scheduleCard(upcoming, 'planned') : '<p class="upcoming-empty">다가오는 일정이 없어요.</p>';
+  container.innerHTML = upcoming ? '<span class="d-day">'+dDayLabel(upcoming)+'</span>'+scheduleCard(upcoming, 'planned')+
+    '<p class="weather-line" id="upcoming-weather" hidden></p>' : '<p class="upcoming-empty">다가오는 일정이 없어요.</p>';
+  if (upcoming) showWeather($('#upcoming-weather'), upcoming);
 }
 
 function renderCalendar() {
@@ -1290,7 +1306,8 @@ function renderCalendar() {
   const events = calendarRecords.filter(record => selectedDay ? includes(record,selectedDay) :
     record.start && record.start <= prefix+'-31' && (record.end || record.start) >= prefix+'-01');
   events.sort((a,b) => a.start.localeCompare(b.start));
-  $('#events').innerHTML = `<h3>${selectedDay ? fmt(selectedDay) + ' 일정' : '이달의 일정'}</h3>` +
+  $('#events').innerHTML = `<div class="events-head"><h3>${selectedDay ? fmt(selectedDay) + ' 일정' : '이달의 일정'}</h3>${selectedDay ?
+    `<button type="button" data-add-on-day="${selectedDay}">＋ 이 날 일정 만들기</button>` : '<span class="hint">날짜를 길게 누르면 바로 만들 수 있어요</span>'}</div>` +
     (events.map(record => scheduleCard(record, selectedDay ? 'calendar' : 'month')).join('') || '<span class="hint">등록된 일정이 없어요.</span>');
 }
 
@@ -1350,6 +1367,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   if (deleteButton) deleteButton.hidden = !record.id;
   if ($('#share-schedule')) $('#share-schedule').hidden = !record.id;
   if ($('#export-ics')) $('#export-ics').hidden = !record.id || !record.start;
+  if ($('#duplicate-schedule')) $('#duplicate-schedule').hidden = !record.id;
   $('#complete').textContent = record.status === 'done' ? '완료 취소' : '완료 처리';
   layoutScheduleSections(true);
   renderCategory();
@@ -1857,6 +1875,241 @@ form.onsubmit = event => {
   event.preventDefault();
   save();
 };
+/* ---- 편의 기능: 길게 눌러 만들기, 복제, 준비물 세트, 날씨·일출, 다크 모드, 설치 안내 ---- */
+
+let pressTimer = 0;
+let pressedDay = '';
+function createOnDay(date) {
+  selectedDay = date;
+  renderCalendar();
+  openEditor();
+}
+$('#calendar').addEventListener('pointerdown', event => {
+  const day = event.target.closest('[data-day]');
+  if (!day || event.button > 0) return;
+  clearTimeout(pressTimer);
+  pressedDay = '';
+  pressTimer = setTimeout(() => {
+    pressedDay = day.dataset.day;
+    navigator.vibrate?.(15);
+    createOnDay(day.dataset.day);
+  }, 550);
+});
+for (const type of ['pointerup','pointerleave','pointercancel','scroll']) {
+  $('#calendar').addEventListener(type, () => clearTimeout(pressTimer), {passive:true});
+}
+$('#calendar').addEventListener('contextmenu', event => {
+  if (event.target.closest('[data-day]')) event.preventDefault();
+});
+$('#calendar').addEventListener('click', event => {
+  if (!pressedDay) return;
+  pressedDay = '';
+  event.stopImmediatePropagation();
+}, true);
+$('#calendar').addEventListener('dblclick', event => {
+  const day = event.target.closest('[data-day]');
+  if (day) createOnDay(day.dataset.day);
+});
+$('#events').addEventListener('click', event => {
+  const add = event.target.closest('[data-add-on-day]');
+  if (add) createOnDay(add.dataset.addOnDay);
+});
+
+const copyExcluded = new Set(['id','start','end','status','certified','hikePhoto','hikeExtraPhotos','hikeTrack','hikePins',
+  'actualTime','actualDistance','actualAscent','actualRoute','deleted']);
+function duplicateSchedule() {
+  const saved = records.find(record => record.id === editing.id);
+  if (!saved) return;
+  const copy = {...blank(), ...structuredClone(Object.fromEntries(Object.entries(saved).filter(([name]) => !copyExcluded.has(name))))};
+  copy.gear = (copy.gear || []).map(item => ({label:item.label, checked:false}));
+  copy.certified = [];
+  copy.status = 'planned';
+  dialog.close();
+  openEditor(copy);
+  $('#editor-title').textContent = '복제한 새 일정';
+  feedback('코스·집결·준비물을 복사했어요. 날짜를 정하고 저장해 주세요.');
+  field('start').focus();
+}
+
+const gearPresets = {
+  day: ['등산화','식수','보조배터리','행동식','바람막이','스틱','모자','선크림'],
+  winter: ['아이젠','스패츠','보온병','다운 재킷','방한 장갑','넥워머','핫팩','헤드랜턴'],
+  backpacking: ['텐트','침낭','매트','버너·가스','코펠','헤드랜턴','물·정수 필터','쓰레기봉투'],
+  safety: ['구급약','호루라기','비상식','은박 담요','신분증']
+};
+function addGearPreset(name) {
+  const existing = new Set(gear.map(item => item.label.replace(/\s/g,'')));
+  const added = gearPresets[name].filter(label => !existing.has(label.replace(/\s/g,'')));
+  gear.push(...added.map(label => ({label, checked:false})));
+  renderGear();
+  feedback(added.length ? '준비물 '+added.length+'개를 추가했어요.' : '이미 모두 들어 있어요.');
+}
+
+const weatherCodes = [[0,'☀️','맑음'],[2,'🌤️','구름 조금'],[3,'☁️','흐림'],[48,'🌫️','안개'],[57,'🌦️','이슬비'],[67,'🌧️','비'],
+  [77,'🌨️','눈'],[82,'🌧️','소나기'],[86,'🌨️','눈 소나기'],[99,'⛈️','뇌우']];
+const weatherOf = code => weatherCodes.find(([max]) => code <= max) || weatherCodes.at(-1);
+const placeCache = new Map();
+const weatherCache = new Map();
+const placeKey = 'oreunaerim:places:v1';
+try { for (const [name, value] of Object.entries(JSON.parse(localStorage.getItem(placeKey) || '{}'))) placeCache.set(name, value); } catch {}
+
+function placeQueries(record) {
+  const clean = value => (value || '').replace(/\(.*?\)/g,' ').replace(/\s+/g,' ').trim();
+  const name = clean(names(record.name || '')[0]);
+  const region = clean(record.region).split(' ');
+  return [...new Set([name, name.split(' ')[0], clean(record.summit), region.at(-1), region.at(-1) && !/[시군구]$/.test(region.at(-1)) ? region.at(-1)+'시' : '',
+    region.at(-1) && !/[시군구]$/.test(region.at(-1)) ? region.at(-1)+'군' : ''].filter(value => value && value.length > 1))];
+}
+
+async function locateRecord(record) {
+  const pin = ['summit','trailhead','trailEnd'].map(id => record.hikePins?.[id]).find(validHikePoint);
+  if (pin) return {latitude:pin.lat, longitude:pin.lon};
+  for (const query of placeQueries(record)) {
+    if (!placeCache.has(query)) {
+      const response = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=ko&countryCode=KR&name='+encodeURIComponent(query));
+      if (!response.ok) throw new Error('geocoding');
+      const found = (await response.json()).results?.[0];
+      placeCache.set(query, found ? {latitude:found.latitude, longitude:found.longitude} : null);
+      try { localStorage.setItem(placeKey, JSON.stringify(Object.fromEntries(placeCache))); } catch {}
+    }
+    if (placeCache.get(query)) return placeCache.get(query);
+  }
+  return null;
+}
+
+function sunTimes({latitude, longitude}, date) {
+  const rad = Math.PI / 180;
+  const [year, monthIndex, day] = date.split('-').map(Number);
+  const julian = Date.UTC(year, monthIndex - 1, day, 12) / 86400000 + 2440587.5;
+  const cycle = julian - 2451545 + 0.0008 - longitude / 360;
+  const anomaly = (357.5291 + 0.98560028 * cycle) % 360;
+  const center = 1.9148 * Math.sin(anomaly * rad) + 0.02 * Math.sin(2 * anomaly * rad) + 0.0003 * Math.sin(3 * anomaly * rad);
+  const ecliptic = (anomaly + center + 282.9372) % 360;
+  const transit = 2451545 + cycle + 0.0053 * Math.sin(anomaly * rad) - 0.0069 * Math.sin(2 * ecliptic * rad);
+  const declination = Math.asin(Math.sin(ecliptic * rad) * Math.sin(23.4397 * rad));
+  const hour = Math.acos((Math.sin(-0.833 * rad) - Math.sin(latitude * rad) * Math.sin(declination)) /
+    (Math.cos(latitude * rad) * Math.cos(declination))) / rad;
+  const clock = value => new Intl.DateTimeFormat('ko-KR', {hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Seoul'})
+    .format(new Date((value - 2440587.5) * 86400000));
+  return {sunrise:clock(transit - hour / 360), sunset:clock(transit + hour / 360)};
+}
+
+async function scheduleWeather(record) {
+  const place = await locateRecord(record);
+  if (!place) return null;
+  const sun = sunTimes(place, record.start);
+  const days = Math.round((Date.parse(record.start) - Date.parse(today)) / 86400000);
+  if (days < 0 || days > 15) return {sun};
+  const key = place.latitude.toFixed(2)+','+place.longitude.toFixed(2)+'|'+record.start;
+  if (!weatherCache.has(key)) {
+    const url = 'https://api.open-meteo.com/v1/forecast?timezone=Asia%2FSeoul&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max'+
+      '&latitude='+place.latitude+'&longitude='+place.longitude+'&start_date='+record.start+'&end_date='+record.start;
+    weatherCache.set(key, fetch(url).then(response => response.ok ? response.json() : Promise.reject(new Error('weather'))));
+  }
+  const daily = (await weatherCache.get(key).catch(error => { weatherCache.delete(key); throw error; })).daily;
+  return {sun, weather:{code:daily.weather_code[0], min:daily.temperature_2m_min[0], max:daily.temperature_2m_max[0],
+    rain:daily.precipitation_probability_max[0], wind:daily.wind_speed_10m_max[0]}};
+}
+
+function weatherLine(result) {
+  if (!result) return '';
+  const parts = [];
+  if (result.weather) {
+    const [, icon, label] = weatherOf(result.weather.code);
+    parts.push('<span class="wx-main"><span aria-hidden="true">'+icon+'</span> '+label+'</span>',
+      '<span>'+Math.round(result.weather.min)+'° / '+Math.round(result.weather.max)+'°</span>');
+    if (result.weather.rain != null) parts.push('<span>강수 '+result.weather.rain+'%</span>');
+    if (result.weather.wind != null) parts.push('<span>바람 '+Math.round(result.weather.wind / 3.6)+'m/s</span>');
+  }
+  parts.push('<span>일출 '+result.sun.sunrise+'</span>', '<span>일몰 '+result.sun.sunset+'</span>');
+  return parts.join('<i aria-hidden="true">·</i>');
+}
+
+let weatherRequest = 0;
+async function showWeather(target, record) {
+  if (!target) return;
+  const request = String(++weatherRequest);
+  target.dataset.request = request;
+  target.hidden = true;
+  target.innerHTML = '';
+  if (!record?.start || record.status === 'done' || record.start < today || (!isHike(categoryOf(record)) && !record.region)) return;
+  try {
+    const result = await scheduleWeather(record);
+    if (target.dataset.request !== request || !target.isConnected || !result) return;
+    target.innerHTML = weatherLine(result) + (result.weather ? '' : '<span class="wx-note">날씨는 15일 전부터 보여요</span>');
+    target.hidden = false;
+  } catch {}
+}
+
+const colorKey = 'oreunaerim:color-scheme';
+const systemDark = matchMedia('(prefers-color-scheme: dark)');
+function applyColorScheme() {
+  let saved = '';
+  try { saved = localStorage.getItem(colorKey) || ''; } catch {}
+  const dark = saved ? saved === 'dark' : systemDark.matches;
+  document.documentElement.dataset.color = dark ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0f1a15' : '#143d35');
+  const toggle = $('#color-toggle');
+  if (toggle) {
+    toggle.setAttribute('aria-pressed', dark);
+    toggle.setAttribute('aria-label', dark ? '밝은 화면으로 바꾸기' : '어두운 화면으로 바꾸기');
+    toggle.textContent = dark ? '☀️' : '🌙';
+  }
+}
+systemDark.addEventListener('change', applyColorScheme);
+$('#color-toggle')?.addEventListener('click', () => {
+  const next = document.documentElement.dataset.color === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem(colorKey, next); } catch {}
+  applyColorScheme();
+});
+applyColorScheme();
+
+const installKey = 'oreunaerim:install-dismissed';
+let installPrompt = null;
+function renderInstallCard() {
+  const card = $('#install-card');
+  if (!card) return;
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const mobile = matchMedia('(pointer: coarse)').matches;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let dismissed = false;
+  try { dismissed = localStorage.getItem(installKey) === '1'; } catch {}
+  card.hidden = standalone || dismissed || (!installPrompt && !mobile);
+  if (card.hidden) return;
+  $('#install-action').hidden = !installPrompt;
+  $('#install-steps').textContent = installPrompt ? '버튼 한 번이면 홈 화면에 아이콘이 생겨요.' :
+    ios ? 'Safari 아래쪽 공유 버튼(□↑)을 누르고 "홈 화면에 추가"를 골라 주세요.' :
+    '브라우저 메뉴(⋮)에서 "홈 화면에 추가" 또는 "앱 설치"를 골라 주세요.';
+}
+addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  installPrompt = event;
+  renderInstallCard();
+});
+addEventListener('appinstalled', () => {
+  installPrompt = null;
+  try { localStorage.setItem(installKey, '1'); } catch {}
+  renderInstallCard();
+});
+$('#install-action')?.addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => null);
+  installPrompt = null;
+  renderInstallCard();
+});
+$('#install-close')?.addEventListener('click', () => {
+  try { localStorage.setItem(installKey, '1'); } catch {}
+  renderInstallCard();
+});
+renderInstallCard();
+
+$('#duplicate-schedule')?.addEventListener('click', duplicateSchedule);
+$('#gear-presets')?.addEventListener('click', event => {
+  const preset = event.target.closest('[data-gear-preset]')?.dataset.gearPreset;
+  if (preset) addGearPreset(preset);
+});
+
 initLoginBrowserHelp();
 if ($('#schedule-share-dialog')) initScheduleShare();
 render();

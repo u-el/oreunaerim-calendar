@@ -448,3 +448,97 @@ body.forest-interface[data-theme]{
 .feed-sample-chart{width:100%;height:36px;margin-top:4px;color:#23674e;background:#edf4ed;border-radius:8px}
 .feed-sample-badge{position:absolute;z-index:1;top:10px;left:10px;padding:3px 9px;border-radius:99px;background:#143d35d9;color:#fff;font-size:.78rem;font-weight:700}
 @media(max-width:700px){.hike-feed-intro{grid-template-columns:1fr}.feed-sample{transform:none;max-width:420px}}
+
+/* 헤더 버튼 */
+.top-actions{display:flex;align-items:center;gap:8px}
+.icon-button{display:grid;place-items:center;width:44px;height:44px;padding:0;border-radius:50%;background:transparent;border-color:var(--line);font-size:1.1rem}
+
+/* 날짜에서 바로 만들기 */
+.events-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;margin-bottom:4px}
+.events-head h3{margin:0}
+.events-head button{min-height:40px;padding:.35rem .8rem;font-size:.86rem;color:var(--pine)}
+.events-head .hint{font-size:.8rem}
+.calendar-layout .day{touch-action:manipulation;-webkit-touch-callout:none;user-select:none}
+
+/* 준비물 세트 */
+.gear-presets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}
+.gear-presets button{min-height:38px;padding:.3rem .75rem;border-radius:999px;font-size:.85rem;color:var(--pine)}
+
+/* 날씨·일출 */
+.weather-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:10px 0 0;font-size:.88rem;font-weight:650}
+.weather-line i{font-style:normal;opacity:.5}
+.weather-line .wx-main{font-weight:800}
+.weather-line .wx-note{font-weight:500;opacity:.75}
+.forest-interface .upcoming .weather-line{display:inline-flex;padding:6px 12px;border-radius:12px;background:#0d2a1f8c;color:#f1f5ec}
+.hike-overview .weather-line{margin:0;padding:8px 10px;border-radius:10px;background:#fff;color:var(--pine)}
+
+/* BAC 산 모양 진행 그래프 */
+.summit-meter{display:block;width:100%;height:clamp(40px,7vw,58px);overflow:visible;margin-top:2px}
+.summit-meter-bg{fill:#dcdfd2}
+.summit-meter-fill{fill:#32724b}
+.summit-meter-line{stroke:#f3dfaa;stroke-width:1.5;stroke-dasharray:3 3}
+.summit-flag{fill:#e0a526;stroke:#7a5a12;stroke-width:1.5;stroke-linejoin:round}
+.summit-left{font-size:.78rem;color:var(--dim);font-weight:650}
+
+/* 홈 화면 설치 안내 */
+.install-card{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;margin:8px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--white)}
+.install-card img{border-radius:11px}
+.install-card strong{display:block;color:var(--pine)}
+.install-card p{color:var(--dim);font-size:.85rem}
+.install-actions{display:flex;gap:6px}
+.install-actions button{min-height:44px}
+@media(max-width:560px){.install-card{grid-template-columns:44px minmax(0,1fr)}.install-actions{grid-column:1 / -1}.install-actions button{flex:1}}
+
+/* 다크 모드 */
+html[data-color=dark]{color-scheme:dark}
+html[data-color=dark] body,html[data-color=dark] body.forest-interface[data-theme]{
+  --pine:#a9d8bc;--deep:#0b1611;--jade:#8cc7a5;--ink:#e3ebe5;--dim:#9fb2a7;--line:#2c3d35;
+  --page:#0f1a15;--white:#16241d;--mint:#1f3a2d;--gold:#3a3220;--soft:#24372d;--accent:#3f6b55;--accent-hover:#4b7c63;
+  background:var(--page);color:var(--ink)
+}
+html[data-color=dark] :is(header,.forest-interface header){background:var(--page);border-color:var(--line)}
+html[data-color=dark] :is(button,input,textarea,select){background:#1a2a22;border-color:#34483e;color:var(--ink)}
+html[data-color=dark] button:hover{background:#22362c}
+html[data-color=dark] :is(.primary,.forest-interface .primary){background:#3f7a5b;border-color:#3f7a5b;color:#fff}
+html[data-color=dark] .primary:hover{background:#4a8a68}
+html[data-color=dark] .forest-interface .activity-menu button[data-menu],html[data-color=dark] .forest-interface .activity-menu #hike-feed-tab{background:transparent;color:var(--ink)}
+html[data-color=dark] .forest-interface .activity-menu :is(button[data-menu],#hike-feed-tab)[aria-pressed=true]{background:#3f7a5b;color:#fff}
+html[data-color=dark] .forest-interface .certification-shortcut{background:transparent}
+html[data-color=dark] :is(dialog,.dialog-actions,.calendar,.forest-interface .calendar,.account-banner,.hike-feed-intro,.hike-search,.install-card,.empty,.hike-feed-card){background:var(--white);color:var(--ink);border-color:var(--line)}
+html[data-color=dark] dialog::backdrop{background:#000a}
+html[data-color=dark] .forest-interface .calendar-nav{background:#1c2c24}
+html[data-color=dark] .forest-interface .calendar-layout .day:not(.has-event){background:#1a2821;color:var(--ink)}
+html[data-color=dark] .forest-interface .calendar-layout .day[aria-pressed=true]:not(.has-event){background:#3f7a5b;color:#fff}
+html[data-color=dark] .forest-interface .day-fills .hike{background:#4d6b45}
+html[data-color=dark] .forest-interface .day-fills .backpacking{background:#5a4a72}
+html[data-color=dark] .forest-interface .day-fills .food{background:#77622c}
+html[data-color=dark] .forest-interface .day-fills .play{background:#3d5a75}
+html[data-color=dark] :is(.day.has-event,.calendar-layout .day.has-event,.calendar-layout .day.has-event[aria-pressed=true]){color:#f2f5f0}
+html[data-color=dark] .calendar-layout .day.has-event[aria-pressed=true]::after{box-shadow:inset 0 0 0 2px #e8f2ea}
+html[data-color=dark] .forest-interface :is(#records,#events) .schedule-card:hover{background:#1c2c24}
+html[data-color=dark] .forest-interface .tabs button[aria-pressed=true]{background:#1f3a2d;color:var(--pine)}
+html[data-color=dark] .tabs button{background:transparent}
+html[data-color=dark] .forest-interface .certification-count{background:#1a2a22;color:var(--ink)}
+html[data-color=dark] .forest-interface .certification-count.is-complete{background:#1f3a2d;border-color:#3f6b55}
+html[data-color=dark] .summit-meter-bg{fill:#2b3b33}
+html[data-color=dark] .summit-meter-fill{fill:#6fbf8d}
+html[data-color=dark] .status-planned{background:#30264a;color:#d5c6f5}
+html[data-color=dark] .status-done{background:#2a3238;color:#cfd8de}
+html[data-color=dark] .status-certified{background:#1f3a2d;color:#a9e0bf}
+html[data-color=dark] :is(.hike-overview,.login-browser-help){background:#16261e;border-color:#2c4136}
+html[data-color=dark] .hike-overview-status{background:#24392e}
+html[data-color=dark] .hike-overview dt,html[data-color=dark] #bac-progress-list li small,html[data-color=dark] #schedule-share-data dt{color:var(--dim)}
+html[data-color=dark] .hike-overview-actions a,html[data-color=dark] .hike-overview .weather-line{background:#1a2a22;color:var(--pine)}
+html[data-color=dark] :is(.hike-chart,.feed-sample-chart){background:#1a2a22;color:#8cc7a5}
+html[data-color=dark] .hike-chart-elevation{background:#2a2618;color:#d8c27a}
+html[data-color=dark] :is(.hike-pin + .hike-pin,.hike-comparison td,.hike-comparison th,#bac-progress-list li){border-color:var(--line)}
+html[data-color=dark] :is(.hike-pin-actions a,.bac-sources a){color:var(--pine)}
+html[data-color=dark] .feed-sample{background:#16241d;border-color:#35503f}
+html[data-color=dark] .feed-steps li::before{background:#1f3a2d;color:var(--pine)}
+html[data-color=dark] .album-cover{background:#1a2a22}
+html[data-color=dark] #delete-schedule{color:#f0a19b;border-color:#6b3632}
+html[data-color=dark] #delete-schedule:hover{background:#3a1d1b}
+html[data-color=dark] .brand-mascot{border-color:#2c3d35}
+html[data-color=dark] .upcoming-mascot{border-color:#2c3d35}
+html[data-color=dark] .forest-interface .upcoming{background:linear-gradient(115deg,#0f2a1f,#1c3f2e 78%,#2b523c)}
+html[data-color=dark] #toast{background:#e3ebe5;color:#0f1a15}
