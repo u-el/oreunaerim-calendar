@@ -679,6 +679,7 @@ function render() {
   renderBacProgress();
   renderHikeSearch();
   updateScheduleShare();
+  renderAccountBanner();
   const active = menus[menu];
   document.body.dataset.theme = menu;
   document.querySelectorAll('[data-menu]').forEach(button => {
@@ -1089,9 +1090,10 @@ function renderHikeFeed() {
     isHike(categoryOf(record)) && (savedHikePhotos(record).length || hikeHasTrack(record.hikeTrack))).sort((first, second) =>
       (second.start || '').localeCompare(first.start || '') || (second.end || '').localeCompare(first.end || '')) : [];
   const message = $('#hike-feed-message');
-  message.hidden = posts.length > 0;
-  message.textContent = !account ? 'Google 계정으로 로그인하면 내 산행 사진과 경로를 볼 수 있어요.' :
-    !cloudReady ? $('#sync-status').textContent : '완료한 산행이나 백패킹 일정에 사진이나 GPX 경로를 저장하면 여기에 나타나요.';
+  const loading = account && !cloudReady;
+  message.hidden = !loading;
+  message.textContent = loading ? $('#sync-status').textContent : '';
+  renderHikeFeedIntro(loading || posts.length ? '' : account ? 'empty' : 'guest');
   $('#hike-feed-cards').innerHTML = posts.map(record => {
     const photos = savedHikePhotos(record);
     const summary = actualHikeSummary(record);
@@ -1108,6 +1110,108 @@ function renderHikeFeed() {
       ${hikeTrackPreview(record.hikeTrack)}
     </button></div>`;
   }).join('');
+}
+
+const feedSteps = [
+  ['완료한 산행 열기','산행이나 백패킹 일정을 완료 처리해요.'],
+  ['사진·GPX 저장','사진은 5장까지, GPX를 넣으면 경로와 고도 그래프가 그려져요.'],
+  ['앨범으로 모아보기','다녀온 산이 최신순 카드로 쌓이고 사진을 넘겨볼 수 있어요.']
+];
+
+function renderHikeFeedIntro(mode) {
+  const intro = $('#hike-feed-intro');
+  if (!intro) return;
+  intro.hidden = !mode;
+  if (!mode) {
+    intro.replaceChildren();
+    return;
+  }
+  const steps = '<ol class="feed-steps">'+feedSteps.map(([title, text]) =>
+    '<li><strong>'+title+'</strong><span>'+text+'</span></li>').join('')+'</ol>';
+  const sample = `<figure class="feed-sample" aria-label="산행 피드 카드 예시">
+    <span class="feed-sample-badge">예시</span>
+    <img src="crew-hike.jpeg" alt="" loading="lazy" width="320" height="200">
+    <figcaption><strong>치악산 비로봉</strong><span>2026. 10. 18. (토)</span>
+    <span class="hike-card-metrics">12.4km · 5시간 20분 · 상승 1,050m</span>
+    <svg class="feed-sample-chart" viewBox="0 0 200 40" aria-hidden="true"><path d="M0 36 L20 30 L45 26 L70 14 L95 6 L120 12 L145 22 L170 28 L200 34" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg></figcaption>
+  </figure>`;
+  intro.innerHTML = mode === 'guest'
+    ? `<div class="feed-intro-copy"><p class="feed-intro-lead">다녀온 산행을 사진과 경로로 남기는 나만의 산행 앨범이에요.</p>${steps}
+       <div class="feed-intro-actions"><button type="button" class="primary" data-feed-login${sync ? '' : ' disabled'}>Google로 로그인하고 시작하기</button></div>
+       <p class="hint">로그인하면 휴대폰과 PC에서 같은 앨범을 볼 수 있어요.</p></div>${sample}`
+    : `<div class="feed-intro-copy"><p class="feed-intro-lead">아직 앨범에 올라온 산행이 없어요.</p>${steps}
+       <div class="feed-intro-actions"><button type="button" class="primary" data-feed-done>완료한 산행 보러 가기</button><button type="button" data-add-schedule>＋ 새 일정</button></div></div>${sample}`;
+}
+
+function renderAccountBanner() {
+  const banner = $('#account-banner');
+  if (!banner) return;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem(bannerKey) === '1'; } catch {}
+  banner.hidden = Boolean(account) || !sync || dismissed || showingHikeFeed;
+}
+const bannerKey = 'oreunaerim:account-banner-dismissed';
+
+function dDayLabel(record) {
+  const day = date => Date.UTC(...date.split('-').map((part, index) => Number(part) - (index === 1 ? 1 : 0)));
+  const diff = Math.round((day(record.start) - day(today)) / 86400000);
+  if (diff < 0) return '진행 중';
+  return diff === 0 ? 'D-DAY' : 'D-'+diff;
+}
+
+function icsText(value) {
+  return String(value ?? '').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+}
+
+function icsFold(line) {
+  const parts = [];
+  let current = '';
+  for (const char of line) {
+    if (new TextEncoder().encode(current+char).length > 73) {
+      parts.push(current);
+      current = ' ';
+    }
+    current += char;
+  }
+  return parts.concat(current).join('\r\n');
+}
+
+function scheduleIcs(record) {
+  const compact = date => date.replaceAll('-','');
+  const next = new Date(Date.UTC(...(record.end || record.start).split('-').map((part, index) => Number(part) - (index === 1 ? 1 : 0))) + 86400000);
+  const end = next.toISOString().slice(0,10);
+  const category = categoryOf(record);
+  const meetup = [record.meetingTime && '집결 '+record.meetingTime, record.meetingPlace].filter(Boolean).join(' · ');
+  const course = [record.trailhead, record.summit, record.trailEnd].filter(Boolean).join(' → ');
+  const description = [categories[category], meetup, course && '코스 '+course, isHike(category) && hikingMetrics(record),
+    record.host && '벙주 '+record.host, record.notice].filter(Boolean).join('\n');
+  const stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Oreunaerim//Calendar//KO','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT','UID:'+record.id+'@oreunaerim-calendar','DTSTAMP:'+stamp,
+    'DTSTART;VALUE=DATE:'+compact(record.start),'DTEND;VALUE=DATE:'+compact(end),
+    'SUMMARY:'+icsText((isHike(category) ? '⛰ ' : '')+record.name),
+    record.meetingPlace || record.region ? 'LOCATION:'+icsText(record.meetingPlace || record.region) : '',
+    description ? 'DESCRIPTION:'+icsText(description) : '',
+    record.mapUrl && /^https?:/i.test(record.mapUrl) ? 'URL:'+record.mapUrl : '',
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsText(record.name+' 하루 전이에요'),'TRIGGER:-PT15H','END:VALARM',
+    'END:VEVENT','END:VCALENDAR'].filter(Boolean).map(icsFold).join('\r\n')+'\r\n';
+}
+
+function exportScheduleIcs() {
+  const record = records.find(item => item.id === editing.id);
+  if (!record?.start) {
+    feedback('캘린더 앱에 추가하려면 시작 날짜를 입력하고 저장해 주세요.');
+    return;
+  }
+  const url = URL.createObjectURL(new Blob([scheduleIcs(record)],{type:'text/calendar;charset=utf-8'}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = (record.name.replace(/[\\/:*?"<>|]/g,'').trim() || '오르내림-일정')+'.ics';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+  feedback('일정 파일을 받았어요. 파일을 열면 캘린더 앱에 추가돼요.');
 }
 
 function scheduleDate(record, includeYear) {
@@ -1157,7 +1261,7 @@ function renderUpcoming(categories) {
     const character = crewMascots[crewMascotIndex[menu]];
     mascot.src = menu === 'all' ? 'forest-hiker-panda.webp' : 'crew-'+character+'.jpeg';
   }
-  container.innerHTML = upcoming ? scheduleCard(upcoming, 'planned') : '<p class="upcoming-empty">다가오는 일정이 없어요.</p>';
+  container.innerHTML = upcoming ? '<span class="d-day">'+dDayLabel(upcoming)+'</span>'+scheduleCard(upcoming, 'planned') : '<p class="upcoming-empty">다가오는 일정이 없어요.</p>';
 }
 
 function renderCalendar() {
@@ -1245,6 +1349,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   const deleteButton = $('#delete-schedule');
   if (deleteButton) deleteButton.hidden = !record.id;
   if ($('#share-schedule')) $('#share-schedule').hidden = !record.id;
+  if ($('#export-ics')) $('#export-ics').hidden = !record.id || !record.start;
   $('#complete').textContent = record.status === 'done' ? '완료 취소' : '완료 처리';
   layoutScheduleSections(true);
   renderCategory();
@@ -1636,6 +1741,18 @@ document.addEventListener('click',event => {
     openEditor();
     return;
   }
+  if (event.target.closest('[data-feed-login], #account-banner-login')) {
+    loginWithBrowserHelp().then(() => {
+      const help = $('#calendar-login-help');
+      if (help && !help.hidden) help.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+    return;
+  }
+  if (event.target.closest('[data-feed-done]')) {
+    $('[data-menu="hike"]').click();
+    $('[data-view="done"]').click();
+    return;
+  }
   const button = event.target.closest('[data-record]');
   if (!button) return;
   const record = records.find(item => item.id === button.dataset.record);
@@ -1725,6 +1842,12 @@ $('#gear-name').onkeydown = event => {
   }
 };
 if ($('#delete-schedule')) $('#delete-schedule').onclick = removeSchedule;
+if ($('#export-ics')) $('#export-ics').onclick = exportScheduleIcs;
+if ($('#account-banner-close')) $('#account-banner-close').onclick = () => {
+  try { localStorage.setItem(bannerKey, '1'); } catch {}
+  $('#account-banner').hidden = true;
+  feedback('하단의 Google로 로그인 버튼으로 언제든 로그인할 수 있어요.');
+};
 $('#complete').onclick = () => save(editing.status === 'done' ? 'planned' : 'done');
 form.addEventListener('invalid', event => {
   const details = event.target.closest('details');
@@ -1805,6 +1928,8 @@ async function runAccountAction(action, errorMessage) {
 if ($('#sync-status')) import('./sync.mjs?v=schedule-sharing').then(module => {
   sync = module;
   updateScheduleShare();
+  renderAccountBanner();
+  if (showingHikeFeed) renderHikeFeed();
   module.observeAccount(changeAccount);
   $('#google-login').onclick = () => loginWithBrowserHelp();
   $('#google-logout').onclick = () => runAccountAction(module.logout,'로그아웃에 실패했어요. 다시 시도해 주세요.');
