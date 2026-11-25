@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=cert-shortcuts-hike-summary"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=schedule-sharing"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -79,6 +79,16 @@
 .certification-count > .bar { display: block; }
 .certification-count:focus-visible { outline: 2px solid #276749; outline-offset: 2px; }
 .hike-card-metrics { display: block; color: var(--pine, #24533c); font-size: .84rem; font-weight: 700; overflow-wrap: anywhere; }
+#schedule-share-dialog { width: min(92vw, 520px); max-height: 88dvh; padding: 16px; box-sizing: border-box; }
+#schedule-share-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: transparent; border: 0; }
+#schedule-share-dialog h2, #schedule-share-data dd { margin: 0; }
+#schedule-share-data { display: grid; gap: 8px; }
+#schedule-share-data > div { display: grid; grid-template-columns: minmax(80px, 28%) minmax(0, 1fr); gap: 8px; }
+#schedule-share-data dt { color: #466153; }
+#schedule-share-data dd { overflow-wrap: anywhere; }
+#schedule-share-dialog button { min-height: 44px; }
+#schedule-share-status:empty { display: none; }
+#editor:has(.editor-content) .dialog-actions { flex-wrap: wrap; }
 </style>
 <!-- BAC public certification locations, checked 2026-11-25. Cheonseongsan details from the BAC September 12 bus listing. -->
 <script type="application/json" id="bac-catalog">{
@@ -593,13 +603,22 @@
 </details>
 </div>
 </div>
-<div class="dialog-actions"><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
+<div class="dialog-actions"><button type="button" id="share-schedule" hidden>일정 공유하기</button><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
 </form></dialog>
 <div role="status" id="toast"></div>
 <dialog id="photo-album" aria-labelledby="photo-album-title">
   <header><h2 id="photo-album-title">산행 사진</h2><button id="photo-album-close" type="button" autofocus>닫기</button></header>
   <img id="photo-album-image" alt="산행 사진">
   <div class="album-controls"><button id="photo-album-prev" type="button">이전</button><span id="photo-album-count" aria-live="polite"></span><button id="photo-album-next" type="button">다음</button></div>
+</dialog>
+<dialog id="schedule-share-dialog" aria-labelledby="schedule-share-title">
+  <header><h2 id="schedule-share-title">공유 일정</h2><button type="button" id="schedule-share-close" autofocus>닫기</button></header>
+  <p class="hint" id="schedule-share-note"></p>
+  <dl id="schedule-share-data"></dl>
+  <p id="schedule-share-status" role="status"></p>
+  <button type="button" class="primary" id="schedule-share-copy" hidden>공유 링크 복사</button>
+  <button type="button" class="primary" id="schedule-share-save" hidden>내 캘린더에 담기</button>
+  <label id="schedule-share-url-row" hidden>공유 링크<input type="url" id="schedule-share-url" readonly></label>
 </dialog>
 </body>
 </html>
