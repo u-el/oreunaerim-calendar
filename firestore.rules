@@ -1,6 +1,20 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 짧은 공유 링크: id를 아는 사람만 읽을 수 있고, 목록 조회·수정·삭제는 막음
+    match /shares/{shareId} {
+      allow get: if shareId.matches('^[A-Za-z0-9]{10}$');
+      allow list, update, delete: if false;
+      allow create: if request.auth != null
+        && shareId.matches('^[A-Za-z0-9]{10}$')
+        && request.resource.data.keys().hasOnly(['v', 'id', 'record', 'from', 'owner', 'createdAt'])
+        && request.resource.data.v == 1
+        && request.resource.data.id is string && request.resource.data.id.size() == 36
+        && request.resource.data.record is map
+        && request.resource.data.from is string && request.resource.data.from.size() <= 20
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.createdAt is int;
+    }
     match /accounts/{uid}/schedules/{scheduleId} {
       function ownsSchedule() {
         return request.auth != null && request.auth.uid == uid;

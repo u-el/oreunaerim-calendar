@@ -43,6 +43,9 @@ const localRecords = () => {
   return saved;
 };
 let sync;
+// sync.mjs를 불러왔는지(실패하면 null) 기다릴 수 있게
+let resolveSync;
+const syncLoaded = new Promise(resolve => resolveSync = resolve);
 let account = null;
 let stopSchedules;
 let cloudReady = false;
@@ -412,6 +415,7 @@ const sharePrefix = '#schedule=';
 // 카톡 같은 메신저가 링크를 중간에서 자르지 않도록 영문·숫자·-_ 만 쓰는 짧은 형식
 const shortSharePrefix = '#s=';
 const isShareHash = hash => hash.startsWith(shortSharePrefix) || hash.startsWith(sharePrefix);
+const shortShareId = hash => hash.startsWith(shortSharePrefix) && hash.slice(shortSharePrefix.length).match(/^([A-Za-z0-9]{10})(?![A-Za-z0-9_-])/)?.[1];
 function toBase64Url(text) {
   const bytes = new TextEncoder().encode(text);
   let binary = '';
@@ -470,14 +474,33 @@ function decodeScheduleShare(hash) {
     const raw = hash.startsWith(shortSharePrefix)
       ? fromBase64Url(hash.slice(shortSharePrefix.length).replace(/[^A-Za-z0-9_-].*$/s, ''))
       : decodeURIComponent(hash.slice(sharePrefix.length));
-    const data = JSON.parse(raw);
-    if (data.v !== 1 || typeof data.id !== 'string' || !/^[a-f0-9-]{36}$/.test(data.id)) return null;
-    const record = cleanSharedSchedule(data.record);
-    sharedFrom = typeof data.from === 'string' ? data.from.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 20) : '';
-    return record ? {...blank(), ...record, id:'shared-'+data.id, status:'planned'} : null;
+    return sharedScheduleFrom(JSON.parse(raw));
   } catch {
     return null;
   }
+}
+
+function sharedScheduleFrom(data) {
+  if (data?.v !== 1 || typeof data.id !== 'string' || !/^[a-f0-9-]{36}$/.test(data.id)) return null;
+  const record = cleanSharedSchedule(data.record);
+  sharedFrom = typeof data.from === 'string' ? data.from.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 20) : '';
+  return record ? {...blank(), ...record, id:'shared-'+data.id, status:'planned'} : null;
+}
+
+// 공유 링크 만들기: 로그인해 있으면 짧은 링크, 안 되면 내용을 담은 긴 링크
+async function buildShareLink(record) {
+  const base = new URL('.', location.href).href;
+  const from = account ? nickname : '';
+  const id = crypto.randomUUID();
+  if (account && sync?.createShare && navigator.onLine) {
+    try {
+      const short = await sync.createShare(account.uid, {v:1, id, record, from});
+      if (short) return base + shortSharePrefix + short;
+    } catch {}
+  }
+  const packed = encodeScheduleShare(record, id, from);
+  if (packed.length > 6400) throw new Error('too-long');
+  return base + shortSharePrefix + packed;
 }
 
 // 공유 창: 받는 사람이 보게 될 일정 카드
@@ -649,19 +672,30 @@ function initScheduleShare() {
   $('#schedule-share-copy').onclick = async () => {
     const output = $('#schedule-share-url');
     const status = $('#schedule-share-status');
-    if (!output.value) {
-      const packed = encodeScheduleShare(sharedSchedule, crypto.randomUUID(), account ? nickname : '');
-      if (packed.length > 6400) {
-        status.textContent = '공유 링크가 너무 길어요. 일정의 코스나 준비물 내용을 줄이고 다시 저장해 주세요.';
-        return;
-      }
-      output.value = new URL('.', location.href).href + shortSharePrefix + packed;
+    const button = $('#schedule-share-copy');
+    if (button.disabled) return;
+    const ready = Boolean(output.value);
+    const link = ready ? Promise.resolve(output.value) : buildShareLink(sharedSchedule);
+    if (!ready) {
+      button.disabled = true;
+      status.textContent = '공유 링크를 만드는 중…';
     }
-    $('#schedule-share-url-row').hidden = false;
+    // 아이폰은 누른 직후에만 복사를 허용해서, 링크가 만들어지는 동안에도 복사 요청을 먼저 걸어 둠
+    let copied = typeof ClipboardItem === 'function' && navigator.clipboard?.write
+      ? navigator.clipboard.write([new ClipboardItem({'text/plain': link.then(text => new Blob([text], {type:'text/plain'}))})]).then(() => true, () => false)
+      : null;
     try {
-      await navigator.clipboard.writeText(output.value);
-      status.textContent = '공유 링크를 복사했어요.';
+      output.value = await link;
     } catch {
+      status.textContent = '공유 링크가 너무 길어요. 일정의 코스나 준비물 내용을 줄이고 다시 저장해 주세요.';
+      button.disabled = false;
+      return;
+    }
+    button.disabled = false;
+    $('#schedule-share-url-row').hidden = false;
+    if (!(await copied)) copied = await navigator.clipboard?.writeText(output.value).then(() => true, () => false);
+    if (copied) status.textContent = '공유 링크를 복사했어요.';
+    else {
       output.focus();
       output.select();
       status.textContent = '선택된 공유 링크를 복사해 주세요.';
@@ -702,8 +736,31 @@ function initScheduleShare() {
       setSyncBusy(false);
     }
   };
-  const openIncoming = () => {
-    if (isShareHash(location.hash)) showScheduleShare('receive', decodeScheduleShare(location.hash));
+  let incoming = 0;
+  const openIncoming = async () => {
+    if (!isShareHash(location.hash)) return;
+    const id = shortShareId(location.hash);
+    if (!id) {
+      showScheduleShare('receive', decodeScheduleShare(location.hash));
+      return;
+    }
+    // 짧은 링크: 서버에서 공유 내용을 불러옴
+    const request = ++incoming;
+    showScheduleShare('receive', null);
+    $('#schedule-share-title').textContent = '공유 일정';
+    $('#schedule-share-status').textContent = '공유 일정을 불러오는 중…';
+    let record = null;
+    let failed = false;
+    try {
+      const module = sync || await syncLoaded;
+      if (!module?.getShare) throw new Error('unavailable');
+      record = sharedScheduleFrom(await module.getShare(id));
+    } catch { failed = true; }
+    if (request !== incoming || location.hash.indexOf(id) < 0) return;
+    if (record) showScheduleShare('receive', record);
+    else $('#schedule-share-status').textContent = failed
+      ? '공유 일정을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.'
+      : '공유 일정을 찾을 수 없어요. 링크가 끝까지 복사됐는지 확인해 주세요.';
   };
   window.addEventListener('hashchange', openIncoming);
   openIncoming();
@@ -2764,8 +2821,9 @@ async function runAccountAction(action, errorMessage) {
   finally { setSyncBusy(false); }
 }
 
-if ($('#sync-status')) import('./sync.mjs?v=nickname').then(module => {
+if ($('#sync-status')) import('./sync.mjs?v=short-share').then(module => {
   sync = module;
+  resolveSync(module);
   updateScheduleShare();
   renderAccountBanner();
   if (showingHikeFeed) renderHikeFeed();
@@ -2779,6 +2837,7 @@ if ($('#sync-status')) import('./sync.mjs?v=nickname').then(module => {
     feedback('이 브라우저의 일정을 계정으로 가져왔어요.');
   },'일정을 가져오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.');
 }).catch(() => {
+  resolveSync(null);
   $('#sync-status').textContent = 'Google 연결을 불러올 수 없어요. 이 브라우저에 저장 중이에요.';
   if (shareMode === 'receive' && sharedSchedule) $('#schedule-share-status').textContent = 'Google 연결을 불러올 수 없어요. 새로고침한 뒤 다시 시도해 주세요.';
 });

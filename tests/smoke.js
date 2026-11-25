@@ -156,6 +156,10 @@ async function run(browser, base, width) {
       observeProfile: (uid, callback) => { setTimeout(() => callback({}), 0); return () => {}; },
       saveProfile: async () => {}, observeGearSets: () => () => {}, saveGearSets: async () => {},
       observeSchedules: (uid, callback) => { setTimeout(() => callback([], false), 0); return () => {}; },
+      // 짧은 공유 링크용 저장소 흉내
+      shares: {}, failShare: false,
+      async createShare(uid, payload) { if (this.failShare) throw new Error('permission-denied'); const id = 'Ab3' + Math.random().toString(36).slice(2, 9).padEnd(7, 'x'); this.shares[id] = payload; return id; },
+      async getShare(id) { return this.shares[id] || null; },
     };
     try { localStorage.clear(); } catch {}
     changeAccount({uid: 'smoke', email: 'smoke@example.com'});
@@ -166,22 +170,36 @@ async function run(browser, base, width) {
   await page.click('#nickname-form button[type=submit]');
   check(`${label} 로그인: 닉네임 표시`, (await page.textContent('#nickname-edit')) === '점검용님');
 
-  // 공유: 보내는 링크에 닉네임, 받는 쪽 제목에 표시
-  const sent = await page.evaluate(async () => {
-    showScheduleShare('send', cleanSharedSchedule({id: 'x', name: '북한산', start: '2030-01-01', end: '2030-01-01', category: 'club-hike', gear: []}));
+  // 공유: 로그인 상태면 짧은 링크, 받는 쪽은 서버에서 불러와 제목에 닉네임 표시
+  const makeLink = () => page.evaluate(async () => {
+    showScheduleShare('send', cleanSharedSchedule({id: 'x', name: '북한산(백운대)!', start: '2030-01-01', end: '2030-01-01', category: 'club-hike', gear: []}));
     const note = document.querySelector('#schedule-share-note').textContent;
     document.querySelector('#schedule-share-copy').click();
-    await new Promise(resolve => setTimeout(resolve, 50));
+    for (let i = 0; i < 40 && !document.querySelector('#schedule-share-url').value; i++) await new Promise(resolve => setTimeout(resolve, 25));
     const url = document.querySelector('#schedule-share-url').value;
     document.querySelector('#schedule-share-dialog').close();
-    showScheduleShare('receive', decodeScheduleShare(url.slice(url.indexOf('#'))));
-    const title = document.querySelector('#schedule-share-title').textContent;
-    document.querySelector('#schedule-share-dialog').close();
-    return {note, title, url};
+    return {note, url};
   });
-  check(`${label} 공유: 링크에 메신저가 끊을 만한 글자 없음`, /#s=[A-Za-z0-9_-]+$/.test(sent.url), sent.url.slice(-40));
-  check(`${label} 공유: 보내는 창에 닉네임 안내`, sent.note.includes('점검용'), sent.note);
-  check(`${label} 공유: 받는 쪽 제목에 닉네임`, sent.title === '점검용님이 공유한 일정', sent.title);
+  const openLink = async url => {
+    await page.evaluate(hash => { location.hash = hash; }, url.slice(url.indexOf('#')));
+    await page.waitForTimeout(150);
+    const title = await page.textContent('#schedule-share-title');
+    const name = await page.evaluate(() => document.querySelector('.share-title')?.textContent || '');
+    await page.evaluate(() => { document.querySelector('#schedule-share-dialog').close(); history.replaceState(null, '', location.pathname); });
+    return {title, name};
+  };
+  const short = await makeLink();
+  check(`${label} 공유: 로그인하면 짧은 링크`, /#s=[A-Za-z0-9]{10}$/.test(short.url), short.url.slice(-30));
+  check(`${label} 공유: 보내는 창에 닉네임 안내`, short.note.includes('점검용'), short.note);
+  const shortOpen = await openLink(short.url);
+  check(`${label} 공유: 짧은 링크 열면 제목에 닉네임`, shortOpen.title === '점검용님이 공유한 일정' && shortOpen.name === '북한산(백운대)!', JSON.stringify(shortOpen));
+  await page.evaluate(() => { sync.failShare = true; });
+  const fallback = await makeLink();
+  check(`${label} 공유: 서버 저장 실패하면 긴 링크`, /#s=[A-Za-z0-9_-]{40,}$/.test(fallback.url), fallback.url.slice(-30));
+  const fallbackOpen = await openLink(fallback.url);
+  check(`${label} 공유: 긴 링크도 열림`, fallbackOpen.title === '점검용님이 공유한 일정', fallbackOpen.title);
+  const missing = await page.evaluate(async () => { location.hash = '#s=Zz9Zz9Zz9Z'; await new Promise(r => setTimeout(r, 150)); const t = document.querySelector('#schedule-share-status').textContent; document.querySelector('#schedule-share-dialog').close(); history.replaceState(null, '', location.pathname); return t; });
+  check(`${label} 공유: 없는 짧은 링크 안내`, missing.includes('찾을 수 없어요'), missing);
 
   // 어두운 화면
   await page.evaluate(() => changeAccount(null));

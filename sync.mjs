@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, getDoc, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const app = initializeApp({
   apiKey: 'AIzaSyAvNt0OvhibmXN4wZr1gjP2UZMO91jnyR8',
@@ -110,4 +110,29 @@ export function observeProfile(uid, onProfile, onError) {
 
 export function saveProfile(uid, nickname) {
   return setDoc(profileDoc(uid), {nickname, updatedAt: Date.now()});
+}
+
+// 짧은 공유 링크: 공유 내용을 shares/{id}에 저장하고 주소에는 id만 넣음
+const shareAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+function shareId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(bytes, byte => shareAlphabet[byte % shareAlphabet.length]).join('');
+}
+
+export async function createShare(uid, payload) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const id = shareId();
+    try {
+      await setDoc(doc(db, 'shares', id), {...payload, owner: uid, createdAt: Date.now()});
+      return id;
+    } catch (error) {
+      // 같은 id가 이미 있으면(규칙상 덮어쓰기 불가) 다른 id로 다시 시도
+      if (error?.code !== 'permission-denied' || attempt === 2) throw error;
+    }
+  }
+}
+
+export async function getShare(id) {
+  const snapshot = await getDoc(doc(db, 'shares', id));
+  return snapshot.exists() ? snapshot.data() : null;
 }
