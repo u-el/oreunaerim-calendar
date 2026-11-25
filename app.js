@@ -436,6 +436,7 @@ const sharedFields = {
 let sharedSchedule;
 let shareMode = '';
 let sharedFrom = '';
+let shareLink = null;
 
 function cleanSharedSchedule(input) {
   if (!input || typeof input !== 'object' || !Object.hasOwn(categories, input.category)) return null;
@@ -532,6 +533,11 @@ function showScheduleShare(mode, record) {
       : account ? ' 닉네임을 설정하면 받는 사람에게 보낸 사람이 표시돼요. (맨 아래 "닉네임 설정")' : ' 로그인하고 닉네임을 설정하면 받는 사람에게 보낸 사람이 표시돼요.')
     : '공유 당시 일정이에요. 담으면 내 캘린더에 예정 일정으로 저장돼요.';
   $('#schedule-share-copy').hidden = mode !== 'send';
+  $('#schedule-share-send').hidden = mode !== 'send' || typeof navigator.share !== 'function';
+  $('#schedule-share-copy').classList.toggle('primary', $('#schedule-share-send').hidden);
+  // 보내기·복사를 누르는 즉시 쓸 수 있게 링크를 미리 만들어 둠 (아이폰은 누른 직후에만 공유·복사 허용)
+  shareLink = mode === 'send' && record ? buildShareLink(record) : null;
+  shareLink?.then(link => { if (sharedSchedule === record) $('#schedule-share-url').value = link; }, () => {});
   $('#schedule-share-save').hidden = mode !== 'receive';
   $('#schedule-share-url-row').hidden = true;
   const help = loginBrowserHelp(true);
@@ -675,7 +681,7 @@ function initScheduleShare() {
     const button = $('#schedule-share-copy');
     if (button.disabled) return;
     const ready = Boolean(output.value);
-    const link = ready ? Promise.resolve(output.value) : buildShareLink(sharedSchedule);
+    const link = ready ? Promise.resolve(output.value) : shareLink || buildShareLink(sharedSchedule);
     if (!ready) {
       button.disabled = true;
       status.textContent = '공유 링크를 만드는 중…';
@@ -699,6 +705,32 @@ function initScheduleShare() {
       output.focus();
       output.select();
       status.textContent = '선택된 공유 링크를 복사해 주세요.';
+    }
+  };
+  $('#schedule-share-send').onclick = async () => {
+    const record = sharedSchedule;
+    const status = $('#schedule-share-status');
+    if (!record) return;
+    let link = $('#schedule-share-url').value;
+    if (!link) {
+      status.textContent = '공유 링크를 만드는 중…';
+      try { link = await (shareLink || buildShareLink(record)); } catch {
+        status.textContent = '공유 링크가 너무 길어요. 일정의 코스나 준비물 내용을 줄이고 다시 저장해 주세요.';
+        return;
+      }
+    }
+    const from = account ? nickname : '';
+    const text = `${from ? from + '님이 ' : ''}일정을 공유했어요\n${record.name} · ${scheduleDate(record, 'auto')}`;
+    try {
+      await navigator.share({title: record.name, text, url: link});
+      status.textContent = '';
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      // 공유 창을 못 열면 메시지와 링크를 복사해 둠
+      const copied = await navigator.clipboard?.writeText(text + '\n' + link).then(() => true, () => false);
+      $('#schedule-share-url').value = link;
+      $('#schedule-share-url-row').hidden = false;
+      status.textContent = copied ? '메시지와 링크를 복사했어요. 카톡에 붙여넣어 주세요.' : '아래 링크를 복사해 카톡에 붙여넣어 주세요.';
     }
   };
   $('#schedule-share-save').onclick = async () => {
@@ -849,6 +881,7 @@ function render() {
     feed.hidden = !showingHikeFeed;
     $('#hike-feed-tab').setAttribute('aria-pressed', showingHikeFeed);
     $('.upcoming').hidden = $('.calendar-layout').hidden = showingHikeFeed;
+    renderPastPlanned();
     if (showingHikeFeed) {
       renderHikeFeed();
       return;
@@ -2902,3 +2935,57 @@ for (const type of ['input', 'change', 'click']) $('#form')?.addEventListener(ty
 /* 맨 아래 앱 버전 표시 (새 버전이 열렸는지 확인용) */
 const appVersion = new URL(document.querySelector('script[src*="app.js"]')?.src || location.href).searchParams.get('v');
 if (appVersion && $('footer')) $('footer').insertAdjacentHTML('beforeend', `<small class="app-version">버전 ${escape(appVersion)}</small>`);
+
+/* 날짜가 지났는데 아직 예정인 일정: 완료 처리 안내 */
+function pastPlannedRecords() {
+  const kinds = menus[menu].categories;
+  return records.filter(record => record.status === 'planned' && record.start && (record.end || record.start) < today && kinds.includes(categoryOf(record)))
+    .sort((first, second) => (second.end || second.start).localeCompare(first.end || first.start));
+}
+function renderPastPlanned() {
+  const box = $('#past-planned');
+  if (!box) return;
+  const list = showingHikeFeed || (account && !cloudReady) ? [] : pastPlannedRecords();
+  box.hidden = !list.length;
+  if (!list.length) { box.replaceChildren(); renderPastPlanned.open = false; return; }
+  box.innerHTML = `<div class="past-planned-head"><p><strong>지난 일정 ${list.length}개</strong>가 아직 예정으로 남아 있어요.</p>
+    <button type="button" data-past-toggle aria-expanded="${renderPastPlanned.open}">${renderPastPlanned.open ? '접기' : '완료 처리하기'}</button></div>
+    ${renderPastPlanned.open ? `<ul>${list.map(record => `<li><button type="button" class="past-open" data-record="${escape(record.id)}"><span>${escape(scheduleDate(record, 'auto'))}</span><strong>${escape(record.name)}</strong></button>
+      <button type="button" class="past-done" data-past-done="${escape(record.id)}">다녀왔어요</button></li>`).join('')}</ul>
+      <p class="hint">취소된 일정은 눌러서 열고 ⋯ 더보기에서 삭제할 수 있어요.</p>` : ''}`;
+}
+async function completePastPlanned(id) {
+  const record = records.find(item => item.id === id);
+  if (!record || pendingOperation) return;
+  const updated = {...record, status:'done'};
+  const uid = account?.uid;
+  try {
+    if (uid) {
+      if (!cloudReady || !navigator.onLine) throw new Error('Unavailable sync');
+      setSyncBusy(true);
+      await sync.saveSchedule(uid, updated);
+      if (account?.uid !== uid) return;
+    } else {
+      localStorage.setItem(key, JSON.stringify(records.map(item => item.id === id ? updated : item)));
+    }
+  } catch {
+    feedback(uid && !navigator.onLine ? '오프라인에서는 완료 처리할 수 없어요.' : '완료 처리하지 못했어요. 다시 시도해 주세요.');
+    return;
+  } finally {
+    if (uid) setSyncBusy(false);
+  }
+  records = records.map(item => item.id === id ? updated : item);
+  feedback(`${record.name} 완료! ${isHike(categoryOf(record)) ? '인증·사진은 일정을 열어 남길 수 있어요.' : ''}`.trim());
+  render();
+}
+$('#past-planned')?.addEventListener('click', event => {
+  if (event.target.closest('[data-past-toggle]')) {
+    renderPastPlanned.open = !renderPastPlanned.open;
+    renderPastPlanned();
+    $('#past-planned [data-past-toggle]')?.focus();
+    return;
+  }
+  const done = event.target.closest('[data-past-done]');
+  if (done) completePastPlanned(done.dataset.pastDone);
+  // 일정 이름을 누르면 아래 공통 클릭 처리(data-record)가 상세 창을 열어 줌
+});

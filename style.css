@@ -819,3 +819,20 @@ html[data-color=dark] #schedule-share-close{background:#1a2a22}
 .share-card.is-loading i:nth-child(4){width:85%;margin-top:6px}
 @keyframes share-shimmer{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.share-card.is-loading i{animation:none}}
+
+/* 지난 일정 완료 처리 안내 */
+.past-planned{margin:-8px 0 20px;padding:12px 16px;border:1px solid #ead9a8;border-radius:14px;background:#fff8e6}
+.past-planned-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.past-planned-head p{margin:0;font-size:.92rem;color:var(--ink)}
+.past-planned-head button{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:0;background:var(--pine);color:#fff;font-weight:700;font-size:.85rem}
+.past-planned ul{display:grid;gap:2px;margin:10px 0 6px;padding:0;list-style:none}
+.past-planned li{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed #ead9a8}
+.past-planned .past-open{flex:1;display:grid;gap:1px;min-width:0;padding:4px 2px;border:0;background:none;text-align:left;color:var(--ink)}
+.past-planned .past-open span{font-size:.78rem;color:var(--dim)}
+.past-planned .past-open strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.past-planned .past-done{flex:none;min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--jade);background:var(--white);color:var(--jade);font-weight:700;font-size:.82rem}
+.past-planned .hint{margin:4px 0 0;font-size:.78rem}
+html[data-color=dark] .past-planned{background:#2a2617;border-color:#4a4127}
+html[data-color=dark] .past-planned li{border-color:#4a4127}
+html[data-color=dark] .past-planned-head button{background:#3f7a5b}
+#schedule-share-dialog>#schedule-share-copy:not(.primary){width:100%;min-height:46px}

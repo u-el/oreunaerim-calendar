@@ -154,6 +154,17 @@ async function run(browser, base, width) {
   check(`${label} 피드: 같은 이름 다른 산 구분 (가야산 2곳 + 관악산)`, feed.peaks === '다녀온 산 3곳', feed.peaks);
   check(`${label} 피드: 가로 넘침 없음`, await overflowX(page) <= 0);
 
+  // 지난 일정 완료 처리 안내
+  await page.click('[data-menu="all"]');
+  await page.evaluate(() => { records.push({...records[0], id: 'past1', name: '지난 산행', start: '2020-05-05', end: '2020-05-05', status: 'planned'}); render(); });
+  const pastShown = await page.evaluate(() => !document.querySelector('#past-planned').hidden && document.querySelector('#past-planned').textContent.includes('지난 일정 1개'));
+  check(`${label} 지난 일정 안내 보임`, pastShown);
+  await page.click('[data-past-toggle]');
+  await page.click('[data-past-done="past1"]');
+  await page.waitForTimeout(100);
+  const past = await page.evaluate(() => ({status: records.find(r => r.id === 'past1').status, hidden: document.querySelector('#past-planned').hidden}));
+  check(`${label} 지난 일정 '다녀왔어요'로 완료`, past.status === 'done' && past.hidden, JSON.stringify(past));
+
   // 로그인 흉내: 닉네임 창
   await page.evaluate(() => {
     sync = {
@@ -192,6 +203,19 @@ async function run(browser, base, width) {
     await page.evaluate(() => { document.querySelector('#schedule-share-dialog').close(); history.replaceState(null, '', location.pathname); });
     return {title, name};
   };
+  const shared = await page.evaluate(async () => {
+    window.sharedArgs = null;
+    navigator.share = async args => { window.sharedArgs = args; };
+    showScheduleShare('send', cleanSharedSchedule({id: 'x', name: '팔봉산', start: '2030-12-07', end: '2030-12-07', category: 'club-hike', gear: []}));
+    const visible = !document.querySelector('#schedule-share-send').hidden;
+    await new Promise(resolve => setTimeout(resolve, 50));
+    document.querySelector('#schedule-share-send').click();
+    for (let i = 0; i < 40 && !window.sharedArgs; i++) await new Promise(resolve => setTimeout(resolve, 25));
+    document.querySelector('#schedule-share-dialog').close();
+    return {visible, args: window.sharedArgs};
+  });
+  check(`${label} 공유: 카톡 등으로 보내기 버튼`, shared.visible);
+  check(`${label} 공유: 보내는 메시지에 닉네임·일정·짧은 링크`, shared.args?.text?.startsWith('점검용님이 일정을 공유했어요') && shared.args.text.includes('팔봉산') && /#s=[A-Za-z0-9]{10}$/.test(shared.args.url || ''), JSON.stringify(shared.args));
   const short = await makeLink();
   check(`${label} 공유: 로그인하면 짧은 링크`, /#s=[A-Za-z0-9]{10}$/.test(short.url), short.url.slice(-30));
   check(`${label} 공유: 보내는 창에 닉네임 안내`, short.note.includes('점검용'), short.note);
