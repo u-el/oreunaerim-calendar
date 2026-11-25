@@ -382,6 +382,19 @@ function renderBacProgress() {
 
 function initBacProgress() {
   const panel = $('#bac-progress');
+  $('#certification-cards').onclick = event => {
+    const card = event.target.closest('[data-certification-list]');
+    if (!card) return;
+    $('#bac-progress-type').value = card.dataset.certificationList;
+    $('#bac-progress-status').value = 'done';
+    $('#bac-progress-search').value = '';
+    bacListLimit = bacPageSize;
+    panel.open = true;
+    renderBacProgress();
+    const heading = panel.querySelector('summary');
+    heading.focus({preventScroll:true});
+    heading.scrollIntoView({block:'nearest'});
+  };
   panel.ontoggle = renderBacProgress;
   panel.oninput = () => {
     bacListLimit = bacPageSize;
@@ -409,10 +422,10 @@ function renderCertification() {
     const count = countCertifiedPeaks(type);
     const goal = certificationGoals[type];
     const percent = Math.min(100, Math.round(count / goal * 100));
-    return `<div class="certification-count${count >= goal ? ' is-complete' : ''}">
+    return `<button type="button" class="certification-count${count >= goal ? ' is-complete' : ''}" data-certification-list="${type}" aria-controls="bac-progress" aria-label="${certificationTypes[type]} ${count} / ${goal}좌, 완료 목록 열기">
       <span class="certification-label">${certificationTypes[type]}${count >= goal ? '<span class="completion-badge">완등</span>' : ''}</span>
       <strong>${count}<small> / ${goal}좌</small></strong>
-      <div class="bar" aria-hidden="true"><i style="width:${percent}%"></i></div></div>`;
+      <span class="bar" aria-hidden="true"><i style="width:${percent}%"></i></span></button>`;
   }).join('');
 }
 
@@ -615,16 +628,36 @@ function hikeTrackPreview(track) {
   </span>`;
 }
 
-function hikeComparison(record) {
+function hikeMetric(value, unit) {
+  return value != null && value !== '' ? value+' '+unit : '';
+}
+
+function actualHikeMetrics(record) {
   const track = hikeHasTrack(record.hikeTrack) ? record.hikeTrack : null;
-  const metric = (value, unit) => value != null && value !== '' ? `${value} ${unit}` : '';
   const minutes = track?.minutes;
-  const duration = Number.isFinite(minutes) && minutes > 0 ?
-    `${Math.floor(minutes / 60) ? Math.floor(minutes / 60) + '시간 ' : ''}${minutes % 60}분 (GPX 경과 시간)` : '';
+  let duration = '';
+  if (Number.isFinite(minutes) && minutes > 0) {
+    const hours = Math.floor(minutes / 60);
+    duration = [hours && hours+'시간', minutes % 60 && minutes % 60+'분'].filter(Boolean).join(' ');
+  }
+  return {
+    distance:hikeMetric(record.actualDistance === '' ? track?.km : record.actualDistance ?? track?.km, 'km'),
+    time:record.actualTime || (duration && duration+' (GPX 경과 시간)'),
+    ascent:hikeMetric(record.actualAscent === '' ? track?.ascent : record.actualAscent ?? track?.ascent, 'm')
+  };
+}
+
+function actualHikeSummary(record) {
+  const {distance, time, ascent} = actualHikeMetrics(record);
+  return [distance, time, ascent && '상승 '+ascent].filter(Boolean).join(' · ');
+}
+
+function hikeComparison(record) {
+  const actual = actualHikeMetrics(record);
   const rows = [
-    ['거리', metric(record.distance, 'km'), metric(record.actualDistance || track?.km, 'km')],
-    ['시간', record.estimatedTime, record.actualTime || duration],
-    ['누적 상승', metric(record.plannedAscent, 'm'), metric(record.actualAscent || track?.ascent, 'm')]
+    ['거리', hikeMetric(record.distance, 'km'), actual.distance],
+    ['시간', record.estimatedTime, actual.time],
+    ['누적 상승', hikeMetric(record.plannedAscent, 'm'), actual.ascent]
   ];
   return `<table class="hike-comparison"><thead><tr><th scope="col">항목</th><th scope="col">계획</th><th scope="col">실제</th></tr></thead><tbody>${rows.map(([label, planned, actual]) =>
     `<tr><th scope="row">${label}</th><td>${escape(planned || '—')}</td><td>${escape(actual || '—')}</td></tr>`).join('')}</tbody></table>`;
@@ -815,13 +848,15 @@ function renderHikeFeed() {
     !cloudReady ? $('#sync-status').textContent : '완료한 산행이나 백패킹 일정에 사진이나 GPX 경로를 저장하면 여기에 나타나요.';
   $('#hike-feed-cards').innerHTML = posts.map(record => {
     const photos = savedHikePhotos(record);
+    const summary = actualHikeSummary(record);
     return `<div class="album-card">${albumCover(record, photos)}
     <button type="button" class="hike-feed-card" data-record="${escape(record.id)}">
 
       <span class="hike-feed-card-body">
         <strong>${escape(record.name)}</strong>
 
-        <span>${escape(scheduleDate(record, true))}${record.actualTime ? ' · '+escape(record.actualTime) : ''}</span>
+        <span>${escape(scheduleDate(record, true))}</span>
+        ${summary ? '<span class="hike-card-metrics">'+escape(summary)+'</span>' : ''}
         ${isCompletedCertification(record) ? '<span class="schedule-status status-certified">인증 완료</span>' : ''}
       </span>
       ${hikeTrackPreview(record.hikeTrack)}
@@ -850,12 +885,14 @@ function scheduleCard(record, displayView) {
     .filter(line => /^(집결(?:\s*(?:장소|시간))?|출발\s*(?:장소|시간))\s*[:：]/.test(line));
   const meetup = [record.meetingTime, record.meetingPlace].filter(Boolean).join(' ');
   const details = [...(meetup && isHike(category) ? ['집결 '+meetup] : meeting), record.region, record.host && '벙주 '+record.host, record.people != null && record.people !== '' && record.people+'명', record.transport, record.overnight !== '숙박 없음' && record.lodging, gear.length && '준비물 '+gear.filter(item => item.checked).length+'/'+gear.length].filter(Boolean);
+  const summary = isHike(category) && record.status === 'done' ? actualHikeSummary(record) : '';
   const card = `<button class="schedule-card card kind-${kind}" type="button" data-record="${escape(record.id)}">
     <span class="schedule-date">${escape(scheduleDate(record, displayView !== 'month'))}</span>
     <span class="schedule-card-body">
       <span class="schedule-card-head"><strong class="card-title">${escape(title)}</strong><span class="schedule-status status-${status}">${statusLabel}</span></span>
       <span class="schedule-tags">${calendarDot(kind)}${escape(labels.join(' · '))}</span>
-      ${isHike(category) && hikingMetrics(record) ? '<span class="meta">'+escape(hikingMetrics(record))+'</span>' : ''}
+      ${summary ? '<span class="hike-card-metrics">'+escape(summary)+'</span>' :
+        isHike(category) && record.status !== 'done' && hikingMetrics(record) ? '<span class="meta">'+escape(hikingMetrics(record))+'</span>' : ''}
       ${details.length ? '<span class="meta">'+escape(details.join(' · '))+'</span>' : ''}
     </span>
   </button>`;
