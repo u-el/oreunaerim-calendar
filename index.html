@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#143d35"><meta name="description" content="섬앤산 인증과 오르내림 모임 일정을 관리하는 캘린더">
-<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=hike-photo-feed"><script defer src="app.js?v=google-login-browser-help"></script>
+<title>오르내림 캘린더</title><link rel="stylesheet" href="style.css?v=feed-login-ics"><script defer src="app.js?v=feed-login-ics"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="oreunaerim-calendar.webmanifest" crossorigin="use-credentials">
@@ -427,6 +427,16 @@
 <button data-menu="play" aria-pressed="false">놀이벙</button>
 <button type="button" id="hike-feed-tab" aria-controls="hike-feed" aria-pressed="false" hidden>산행 피드</button>
 </nav>
+<section id="account-banner" class="account-banner" aria-labelledby="account-banner-title" hidden>
+  <div class="account-banner-text">
+    <strong id="account-banner-title">지금은 이 브라우저에만 저장돼요</strong>
+    <p>Google로 로그인하면 휴대폰과 PC 어디서나 같은 일정을 보고, 산행 피드에 사진과 경로를 모을 수 있어요.</p>
+  </div>
+  <div class="account-banner-actions">
+    <button type="button" class="primary" id="account-banner-login">Google로 로그인</button>
+    <button type="button" id="account-banner-close" aria-label="안내 닫기">나중에</button>
+  </div>
+</section>
 <section id="hike-search" class="hike-search" aria-label="산행 일정 검색" hidden>
   <div class="hike-search-fields">
     <label>산행 일정 검색<input type="search" id="hike-search-query" placeholder="산 이름, 지역, 코스" maxlength="120" autocomplete="off"></label>
@@ -474,6 +484,7 @@
 <section id="hike-feed" class="hike-feed" aria-labelledby="hike-feed-heading" hidden>
   <h1 id="hike-feed-heading">내 산행 앨범</h1>
   <p id="hike-feed-message" class="hike-feed-message" role="status"></p>
+  <div id="hike-feed-intro" class="hike-feed-intro" hidden></div>
   <div id="hike-feed-cards" class="hike-feed-cards"></div>
 </section>
 <footer><div class="sync-panel" aria-label="계정 동기화">
@@ -607,7 +618,7 @@
 </details>
 </div>
 </div>
-<div class="dialog-actions"><button type="button" id="share-schedule" hidden>일정 공유하기</button><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
+<div class="dialog-actions"><button type="button" id="share-schedule" hidden>일정 공유하기</button><button type="button" id="export-ics" hidden>내 캘린더 앱에 추가</button><button type="button" id="delete-schedule" hidden>일정 삭제</button><button type="button" id="complete">완료 처리</button><button type="submit" class="primary">저장</button></div>
 </form></dialog>
 <div role="status" id="toast"></div>
 <dialog id="photo-album" aria-labelledby="photo-album-title">
