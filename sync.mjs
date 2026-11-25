@@ -67,3 +67,13 @@ export async function importSchedules(uid, records) {
     });
   }
 }
+
+export function addSharedSchedule(uid, record) {
+  const ref = doc(schedules(uid), record.id);
+  return runTransaction(db, async transaction => {
+    const current = await transaction.get(ref);
+    if (current.exists() && current.data()?.deleted !== true) return false;
+    transaction.set(ref, record);
+    return true;
+  });
+}
