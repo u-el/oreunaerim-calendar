@@ -118,6 +118,14 @@ async function run(browser, base, width) {
     return {gap: end.left - start.right, height: Math.round(start.height), other: Math.round(region.height)};
   });
   check(`${label} 새 일정: 날짜 칸 안 겹침`, dates.gap >= 0 && Math.abs(dates.height - dates.other) <= 2, JSON.stringify(dates));
+  const meet = await page.evaluate(() => {
+    document.querySelectorAll('#editor details').forEach(section => section.open = true);
+    const box = name => document.querySelector(`#form [name=${name}]`).getBoundingClientRect();
+    const time = box('meetingTime'); const place = box('meetingPlace');
+    const content = document.querySelector('#editor .editor-content') || document.querySelector('#editor form');
+    return {gap: Math.round(place.left - time.right), height: Math.round(time.height), other: Math.round(place.height), overflow: content.scrollWidth - content.clientWidth};
+  });
+  check(`${label} 새 일정: 집결 시간·장소 안 겹침, 창 가로 넘침 없음`, meet.gap >= 0 && Math.abs(meet.height - meet.other) <= 2 && meet.overflow <= 0, JSON.stringify(meet));
   check(`${label} 새 일정: 더보기 메뉴 숨김`, await page.evaluate(() => document.querySelector('#more-actions').hidden));
   const cut = await truncatedSelects(page, '#editor');
   check(`${label} 새 일정: 드롭다운 글자 안 잘림`, !cut.length, cut.join(', '));

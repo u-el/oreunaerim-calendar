@@ -698,10 +698,10 @@ html[data-color=dark] select:not(.filters select){background:#1a2a22 url("data:i
 .forest-interface :is(#records,#events) .schedule-card{grid-template-columns:5.4rem minmax(0,1fr)}
 @media(max-width:560px){.forest-interface :is(#records,#events) .schedule-card{grid-template-columns:4.9rem minmax(0,1fr)}}
 /* iOS Safari 날짜 칸: 기본 최소 너비·높이 때문에 옆 칸을 덮는 문제 */
-.form-grid>label{min-width:0}
-input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;min-height:2.5rem;line-height:1.4;text-align:left}
-input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0;min-height:1.4em}
-input[type=date]::-webkit-calendar-picker-indicator{margin:0}
+.form-grid>label,fieldset label,.details-content label{min-width:0}
+input:is([type=date],[type=time]){-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;min-height:2.5rem;line-height:1.4;text-align:left}
+input:is([type=date],[type=time])::-webkit-date-and-time-value{text-align:left;margin:0;min-height:1.4em}
+input:is([type=date],[type=time])::-webkit-calendar-picker-indicator{margin:0}
 
 /* 디자인 다듬기 3: 탭별 색 통일, 산행 탭 순서, 필터 한 줄, 인증 카드 */
 body.forest-interface:is([data-theme="food"],[data-theme="play"]){--mint:#e1ebdb;--soft:#e8eee0;--accent:#193e30;--accent-hover:#244f3d}
