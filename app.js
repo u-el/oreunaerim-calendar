@@ -544,6 +544,9 @@ function loginBrowserHelp(shared) {
   return $(shared ? '#share-login-help' : '#calendar-login-help');
 }
 
+const isKakaoTalk = (userAgent = navigator.userAgent) => /KAKAOTALK/i.test(userAgent);
+const isAppleDevice = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 function showLoginHelp(shared, message) {
   const help = loginBrowserHelp(shared);
   if (!help) {
@@ -551,6 +554,19 @@ function showLoginHelp(shared, message) {
     else feedback(message);
     return;
   }
+  // 카카오톡 안에서는 바깥 브라우저로 바로 여는 버튼을 먼저 보여 줌
+  const external = help.querySelector('.external-open');
+  const kakao = isKakaoTalk() && external;
+  if (kakao) {
+    const browser = isAppleDevice() ? 'Safari' : '기본 브라우저';
+    external.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+    external.textContent = browser + '로 열기';
+    message = `카카오톡 안에서는 구글 로그인이 제한돼요. 아래 버튼을 누르면 ${browser}에서 ${shared ? '이 일정이' : '앱이'} 바로 열려요.`;
+  }
+  if (external) external.hidden = !kakao;
+  const copy = help.querySelector('button');
+  copy.classList.toggle('primary', shared && !kakao);
+  copy.textContent = kakao ? '링크 복사' : shared ? '공유 일정 링크 복사' : '브라우저에서 열 링크 복사';
   help.querySelector('[role="status"]').textContent = message;
   help.hidden = false;
 }

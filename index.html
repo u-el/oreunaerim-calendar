@@ -8,7 +8,7 @@
 <meta property="og:url" content="https://u-el.github.io/oreunaerim-calendar/"><meta property="og:image" content="https://u-el.github.io/oreunaerim-calendar/og-image.jpg">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="오르내림 캘린더 - 배낭을 멘 레서판다">
 <meta name="twitter:card" content="summary_large_image">
-<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=share-card"><script defer src="app.js?v=share-link-2"></script>
+<title>오르내림 캘린더</title><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><link rel="stylesheet" href="style.css?v=share-card"><script defer src="app.js?v=kakao-open"></script>
 <script>try{var c=localStorage.getItem('oreunaerim:color-scheme');document.documentElement.dataset.color=(c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="오르내림">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=night">
@@ -99,6 +99,8 @@
 .login-browser-help { flex-basis: 100%; padding: 10px; margin-block: 6px; border-radius: 10px; background: #ecf4ed; }
 .login-browser-help p { margin: 0 0 8px; }
 .login-browser-help input { width: 100%; margin-top: 8px; }
+.login-browser-help .external-open { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; margin: 0 8px 8px 0; border-radius: 999px; text-decoration: none; font-weight: 700; }
+.login-browser-help .external-open[hidden] { display: none; }
 </style>
 <!-- BAC public certification locations, checked 2026-11-25. Cheonseongsan details from the BAC September 12 bus listing. -->
 <script type="application/json" id="bac-catalog">{
@@ -532,7 +534,7 @@
   <button id="nickname-edit" type="button" hidden>닉네임 설정</button>
   <span id="sync-status" role="status">이 브라우저에 저장 중</span><span class="footer-break" aria-hidden="true"></span>
   <button id="google-login" type="button" hidden>Google로 로그인</button>
-  <div class="login-browser-help" id="calendar-login-help" data-login-help hidden><p role="status"></p><button type="button">브라우저에서 열 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
+  <div class="login-browser-help" id="calendar-login-help" data-login-help hidden><p role="status"></p><a class="primary external-open" hidden>Safari로 열기</a><button type="button">브라우저에서 열 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
   <button id="import-local" type="button" hidden>이 브라우저의 일정 가져오기</button>
   <button id="google-logout" type="button" hidden>로그아웃</button>
 </div><button id="export-backup" type="button">백업 내보내기</button></footer>
@@ -681,7 +683,7 @@
   <p class="hint" id="schedule-share-note"></p>
   <div id="schedule-share-data"></div>
   <p id="schedule-share-status" role="status"></p>
-  <div class="login-browser-help" id="share-login-help" data-login-help hidden><p role="status"></p><button type="button" class="primary">공유 일정 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
+  <div class="login-browser-help" id="share-login-help" data-login-help hidden><p role="status"></p><a class="primary external-open" hidden>Safari로 열기</a><button type="button" class="primary">공유 일정 링크 복사</button><input type="url" readonly hidden aria-label="브라우저에서 열 링크"></div>
   <button type="button" class="primary" id="schedule-share-copy" hidden>공유 링크 복사</button>
   <button type="button" class="primary" id="schedule-share-save" hidden>내 캘린더에 담기</button>
   <label id="schedule-share-url-row" hidden>공유 링크<input type="url" id="schedule-share-url" readonly></label>

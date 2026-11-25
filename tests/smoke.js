@@ -193,12 +193,39 @@ async function run(browser, base, width) {
   await page.close();
 }
 
+// 카카오톡 안에서 공유 링크 열기: Safari로 바로 여는 버튼
+async function kakao(browser, base) {
+  const context = await browser.newContext({viewport: {width: 390, height: 844},
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 KAKAOTALK 10.8.0'});
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
+  await page.goto(base + '/index.html');
+  await page.waitForFunction(() => typeof encodeScheduleShare === 'function');
+  const hash = await page.evaluate(() => '#s=' + encodeScheduleShare(cleanSharedSchedule({id: 'x', name: '팔봉산', start: '2030-12-05', end: '2030-12-06', category: 'club-hike', gear: []}), crypto.randomUUID(), '뚜기'));
+  await page.goto(base + '/' + hash);
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { sync = sync || {}; updateScheduleShare(); });
+  const state = await page.evaluate(() => {
+    const link = document.querySelector('#share-login-help .external-open');
+    return {title: document.querySelector('#schedule-share-title').textContent, shown: link && !link.hidden && !document.querySelector('#share-login-help').hidden,
+      text: link?.textContent, href: link?.getAttribute('href') || ''};
+  });
+  check('카카오톡: 공유 창 제목', state.title === '뚜기님이 공유한 일정', state.title);
+  check('카카오톡: Safari로 열기 버튼', state.shown && state.text === 'Safari로 열기', JSON.stringify(state));
+  check('카카오톡: 바깥 브라우저 주소에 공유 링크 그대로', decodeURIComponent(state.href.split('url=')[1] || '').endsWith(hash), state.href.slice(0, 80));
+  check('카카오톡: 스크립트 오류 없음', !errors.length, errors.join(' | '));
+  await context.close();
+}
+
 (async () => {
   const server = await serve();
   const base = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch();
   try {
     for (const width of [390, 1280]) await run(browser, base, width);
+    await kakao(browser, base);
   } catch (error) {
     check('점검 실행', false, error.message.split('\n')[0]);
   } finally {
