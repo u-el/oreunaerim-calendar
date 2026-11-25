@@ -380,6 +380,180 @@ function renderBacProgress() {
   more.hidden = matching.length <= bacListLimit;
 }
 
+const sharePrefix = '#schedule=';
+const sharedFields = {
+  name:'일정 이름', category:'모임 종류', start:'시작 날짜', end:'종료 날짜', region:'지역', type:'일정 유형',
+  meetingTime:'집결 시간', meetingPlace:'집결 장소', trailhead:'들머리', waypoints:'경유지', summit:'정상',
+  trailEnd:'날머리', routeType:'코스 유형', distance:'거리 (km)', estimatedTime:'예상 소요시간',
+  plannedAscent:'예상 상승고도 (m)', difficulty:'난이도', transport:'교통수단', parking:'주차장',
+  vehiclePickup:'차량 회수', mapUrl:'지도 링크', certificationType:'인증 유형', peakNames:'인증 포인트'
+};
+let sharedSchedule;
+let shareMode = '';
+
+function cleanSharedSchedule(input) {
+  if (!input || typeof input !== 'object' || !Object.hasOwn(categories, input.category)) return null;
+  const record = {};
+  for (const name of Object.keys(sharedFields)) {
+    if (typeof input[name] === 'string' && input[name].trim()) {
+      record[name] = input[name].trim().slice(0, name === 'mapUrl' ? 600 : 240);
+    }
+  }
+  if (!record.name || (isHike(record.category) && !names(record.name).length)) return null;
+  for (const name of ['start','end']) {
+    const date = record[name];
+    if (date && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0,10) !== date)) return null;
+  }
+  if (record.end && (!record.start || record.end < record.start)) return null;
+  if (!isHike(record.category)) {
+    delete record.certificationType;
+    delete record.peakNames;
+  } else if (!Object.hasOwn(certificationTypes, record.certificationType)) {
+    record.certificationType = 'undecided';
+  }
+  if (record.mapUrl && !mapLink(record.mapUrl)) delete record.mapUrl;
+  record.gear = Array.isArray(input.gear) ? input.gear.slice(0, 25).filter(item => typeof item?.label === 'string' && item.label.trim())
+    .map(item => ({label:item.label.trim().slice(0, 80), checked:false})) : [];
+  return record;
+}
+
+function encodeScheduleShare(record, id) {
+  return encodeURIComponent(JSON.stringify({v:1, id, record}));
+}
+
+function decodeScheduleShare(hash) {
+  try {
+    if (hash.length > 6500) return null;
+    const data = JSON.parse(decodeURIComponent(hash.slice(sharePrefix.length)));
+    if (data.v !== 1 || typeof data.id !== 'string' || !/^[a-f0-9-]{36}$/.test(data.id)) return null;
+    const record = cleanSharedSchedule(data.record);
+    return record ? {...blank(), ...record, id:'shared-'+data.id, status:'planned'} : null;
+  } catch {
+    return null;
+  }
+}
+
+function showScheduleShare(mode, record) {
+  const share = $('#schedule-share-dialog');
+  shareMode = mode;
+  sharedSchedule = record;
+  $('#schedule-share-title').textContent = mode === 'send' ? '일정 공유하기' : '공유 일정';
+  $('#schedule-share-note').textContent = mode === 'send' ? '저장된 일정의 아래 내용이 공유돼요. 링크를 받은 사람은 누구나 볼 수 있어요.' : '공유 당시 일정이에요. 담으면 내 캘린더에 예정 일정으로 저장돼요.';
+  $('#schedule-share-copy').hidden = mode !== 'send';
+  $('#schedule-share-save').hidden = mode !== 'receive';
+  $('#schedule-share-url-row').hidden = true;
+  $('#schedule-share-url').value = '';
+  $('#schedule-share-status').textContent = record ? '' : '공유 링크를 읽을 수 없어요.';
+  const values = record ? Object.entries(sharedFields).filter(([key]) => record[key]).map(([key,label]) => {
+    const value = key === 'category' ? categories[record[key]] : key === 'certificationType' ? certificationTypes[record[key]] : record[key];
+    return [label,value];
+  }) : [];
+  if (record?.gear.length) values.push(['준비물', record.gear.map(item => item.label).join(' · ')]);
+  $('#schedule-share-data').innerHTML = values.map(([label,value]) => '<div><dt>'+escape(label)+'</dt><dd>'+escape(value)+'</dd></div>').join('');
+  updateScheduleShare();
+  if (!share.open) share.showModal();
+}
+
+function updateScheduleShare() {
+  if (shareMode !== 'receive') return;
+  const button = $('#schedule-share-save');
+  const existing = account && records.some(item => item.id === sharedSchedule?.id);
+  button.textContent = existing ? '이미 담은 일정이에요' : account ? '내 캘린더에 담기' : 'Google 로그인하고 담기';
+  button.disabled = !sharedSchedule || pendingOperation || !!existing || (account ? !cloudReady : !sync);
+  if (account && !cloudReady && sharedSchedule) {
+    $('#schedule-share-status').textContent = $('#sync-status').textContent;
+  }
+}
+
+function initScheduleShare() {
+  const share = $('#schedule-share-dialog');
+  $('#share-schedule').onclick = () => {
+    const saved = records.find(record => record.id === editing.id);
+    const record = cleanSharedSchedule(saved);
+    if (record) showScheduleShare('send', record);
+    else feedback('공유하려면 일정 이름과 날짜를 확인하고 저장해 주세요.');
+  };
+  $('#schedule-share-close').onclick = () => share.close();
+  share.onclose = () => {
+    if (share.open) return;
+    if (shareMode === 'receive' && location.hash.startsWith(sharePrefix)) {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+    shareMode = '';
+    sharedSchedule = null;
+  };
+  $('#schedule-share-copy').onclick = async () => {
+    const output = $('#schedule-share-url');
+    const status = $('#schedule-share-status');
+    if (!output.value) {
+      const packed = encodeScheduleShare(sharedSchedule, crypto.randomUUID());
+      if (packed.length > 6400) {
+        status.textContent = '공유 링크가 너무 길어요. 일정의 코스나 준비물 내용을 줄이고 다시 저장해 주세요.';
+        return;
+      }
+      output.value = new URL('.', location.href).href + sharePrefix + packed;
+    }
+    $('#schedule-share-url-row').hidden = false;
+    try {
+      await navigator.clipboard.writeText(output.value);
+      status.textContent = '공유 링크를 복사했어요.';
+    } catch {
+      output.focus();
+      output.select();
+      status.textContent = '선택된 공유 링크를 복사해 주세요.';
+    }
+  };
+  $('#schedule-share-save').onclick = async () => {
+    if (!sharedSchedule || !sync || pendingOperation) return;
+    const status = $('#schedule-share-status');
+    if (!account) {
+      setSyncBusy(true);
+      status.textContent = 'Google 로그인 중…';
+      try {
+        await sync.login();
+        status.textContent = '로그인했어요. 일정을 담으려면 아래 버튼을 눌러 주세요.';
+      } catch {
+        status.textContent = '로그인하지 못했어요. 카카오톡에서 열었다면 Safari나 Chrome에서 링크를 열어 보세요.';
+      } finally {
+        setSyncBusy(false);
+      }
+      return;
+    }
+    if (!cloudReady) return;
+    const uid = account.uid;
+    const record = sharedSchedule;
+    setSyncBusy(true);
+    try {
+      const added = await sync.addSharedSchedule(uid, record);
+      if (account?.uid !== uid || record !== sharedSchedule) return;
+      if (added) {
+        records = [...records.filter(item => item.id !== record.id), record];
+        view = 'planned';
+        if (record.start) {
+          month = new Date(record.start.slice(0,7)+'-01T00:00:00');
+          selectedDay = '';
+        }
+      }
+      render();
+      status.textContent = added ? '내 캘린더에 일정을 담았어요.' : '이미 담은 일정이에요.';
+      if (added) {
+        share.close();
+        openEditor(record);
+        feedback('내 캘린더에 일정을 담았어요.');
+      } else $('#schedule-share-save').disabled = true;
+    } catch {
+      status.textContent = '일정을 담지 못했어요. 연결 상태를 확인한 뒤 다시 시도해 주세요.';
+    } finally {
+      setSyncBusy(false);
+    }
+  };
+  const openIncoming = () => {
+    if (location.hash.startsWith(sharePrefix)) showScheduleShare('receive', decodeScheduleShare(location.hash));
+  };
+  window.addEventListener('hashchange', openIncoming);
+  openIncoming();
+}
+
 function initBacProgress() {
   const panel = $('#bac-progress');
   $('#certification-cards').onclick = event => {
@@ -433,6 +607,7 @@ function render() {
   renderCertification();
   renderBacProgress();
   renderHikeSearch();
+  updateScheduleShare();
   const active = menus[menu];
   document.body.dataset.theme = menu;
   document.querySelectorAll('[data-menu]').forEach(button => {
@@ -998,6 +1173,7 @@ function openEditor(record = {...blank(),start:selectedDay,category:$('#category
   $('#editor-title').textContent = record.id ? '일정 상세' : '새 일정';
   const deleteButton = $('#delete-schedule');
   if (deleteButton) deleteButton.hidden = !record.id;
+  if ($('#share-schedule')) $('#share-schedule').hidden = !record.id;
   $('#complete').textContent = record.status === 'done' ? '완료 취소' : '완료 처리';
   layoutScheduleSections(true);
   renderCategory();
@@ -1487,11 +1663,13 @@ form.onsubmit = event => {
   event.preventDefault();
   save();
 };
+if ($('#schedule-share-dialog')) initScheduleShare();
 render();
 if (readError) feedback('저장된 기록을 불러올 수 없어 기본 일정을 표시했어요.');
 
 function setSyncBusy(busy) {
   pendingOperation = busy;
+  updateScheduleShare();
   for (const button of document.querySelectorAll('#google-login, #google-logout, #import-local, .dialog-actions button')) {
     button.disabled = busy;
   }
@@ -1532,6 +1710,7 @@ function changeAccount(user) {
   }, () => {
     cloudReady = false;
     status.textContent = '계정 일정에 연결할 수 없어요.';
+    updateScheduleShare();
     if (showingHikeFeed) render();
     else {
       renderBacProgress();
@@ -1548,8 +1727,9 @@ async function runAccountAction(action, errorMessage) {
   finally { setSyncBusy(false); }
 }
 
-if ($('#sync-status')) import('./sync.mjs?v=schedule-deletion').then(module => {
+if ($('#sync-status')) import('./sync.mjs?v=schedule-sharing').then(module => {
   sync = module;
+  updateScheduleShare();
   module.observeAccount(changeAccount);
   $('#google-login').onclick = () => runAccountAction(module.login,'Google 로그인에 실패했어요. 팝업을 허용한 뒤 다시 시도해 주세요.');
   $('#google-logout').onclick = () => runAccountAction(module.logout,'로그아웃에 실패했어요. 다시 시도해 주세요.');
@@ -1561,4 +1741,5 @@ if ($('#sync-status')) import('./sync.mjs?v=schedule-deletion').then(module => {
   },'일정을 가져오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.');
 }).catch(() => {
   $('#sync-status').textContent = 'Google 연결을 불러올 수 없어요. 이 브라우저에 저장 중이에요.';
+  if (shareMode === 'receive' && sharedSchedule) $('#schedule-share-status').textContent = 'Google 연결을 불러올 수 없어요. 새로고침한 뒤 다시 시도해 주세요.';
 });
