@@ -51,19 +51,20 @@ service cloud.firestore {
         && (d.deletedAt == null || d.deletedAt is timestamp);
     }
     function initial(id) {
-      return common(id) && request.resource.data.version == 1
+      return common(id) && request.resource.data.version == 1 && request.resource.data.deletedAt == null
         && request.resource.data.createdAt == request.time;
     }
     function revision(id) {
       return common(id) && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.version == resource.data.version + 1;
+        && request.resource.data.version == resource.data.version + 1
+        && (resource.data.deletedAt == null || request.resource.data.deletedAt == resource.data.deletedAt);
     }
     function shortText(v, n) { return v is string && v.size() > 0 && v.size() <= n; }
 
     match /accounts/{uid}/clubs/{id} {
       function valid() {
         let d = request.resource.data;
-        return d.keys().hasOnly(["name","status","description","category","color","icon","region","joinedAt","isPrimary","isFavorite","sortOrder","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.name, 200) && shortText(d.status, 200);
+        return d.keys().hasOnly(["name","status","description","category","color","icon","region","joinedAt","isPrimary","isFavorite","sortOrder","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.name, 200) && d.status in ['active','archived','trashed'];
       }
       allow read: if owner(uid);
       allow create: if owner(uid) && initial(id) && valid();
@@ -85,7 +86,7 @@ service cloud.firestore {
     match /accounts/{uid}/customFields/{id} {
       function valid() {
         let d = request.resource.data;
-        return d.keys().hasOnly(["clubId","activityTypeId","label","type","required","options","sortOrder","status","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.clubId, 200) && shortText(d.label, 200) && shortText(d.type, 200);
+        return d.keys().hasOnly(["clubId","activityTypeId","label","type","required","options","sortOrder","status","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.clubId, 200) && shortText(d.label, 200) && d.type in ['text','number','date','time','select','checkbox','url'];
       }
       allow read: if owner(uid);
       allow create: if owner(uid) && initial(id) && valid();
@@ -96,7 +97,7 @@ service cloud.firestore {
     match /accounts/{uid}/schedulesV2/{id} {
       function valid() {
         let d = request.resource.data;
-        return d.keys().hasOnly(["clubId","activityTypeId","title","status","startAt","endAt","startDate","endDate","location","participants","transport","budget","memo","gear","customValues","recurrence","sourceId","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.clubId, 200) && shortText(d.activityTypeId, 200) && shortText(d.title, 200) && shortText(d.status, 200);
+        return d.keys().hasOnly(["clubId","activityTypeId","title","status","startAt","endAt","startDate","endDate","location","participants","transport","budget","memo","gear","customValues","recurrence","sourceId","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.clubId, 200) && shortText(d.activityTypeId, 200) && shortText(d.title, 200) && d.status in ['interested','undecided','planned','completed','cancelled'];
       }
       allow read: if owner(uid);
       allow create: if owner(uid) && initial(id) && valid();
@@ -129,7 +130,7 @@ service cloud.firestore {
     match /accounts/{uid}/certifications/{id} {
       function valid() {
         let d = request.resource.data;
-        return d.keys().hasOnly(["catalogId","targetId","status","activityId","certifiedAt","clubId","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.catalogId, 200) && shortText(d.targetId, 200) && shortText(d.status, 200);
+        return d.keys().hasOnly(["catalogId","targetId","status","activityId","certifiedAt","clubId","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.catalogId, 200) && shortText(d.targetId, 200) && d.status in ['valid','revoked'];
       }
       allow read: if owner(uid);
       allow create: if owner(uid) && initial(id) && valid();
