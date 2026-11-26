@@ -73,5 +73,14 @@ try {
  await assertFails(updateDoc(doc(b,consent),{marketingAccepted:true}));
  await assertFails(deleteDoc(doc(a,consent)));
  await assertFails(getDocs(collection(a,'accounts/alice/settings')));
- console.log('55 assertions passed');
+ await assertFails(updateDoc(doc(a,profile),{nickname:'',onboardingCompleted:true,updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(b,profile),{onboardingCompleted:true,updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(guest,profile),{onboardingCompleted:true,updatedAt:serverTimestamp()}));
+ await assertSucceeds(updateDoc(doc(a,profile),{onboardingCompleted:true,updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,profile),{onboardingCompleted:false,updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,profile),{nickname:'',updatedAt:serverTimestamp()}));
+ await assertFails(setDoc(doc(b,'accounts/bob/settings/moilyProfile'),{...draft,nickname:'Bob',onboardingCompleted:true}));
+ await assertSucceeds(setDoc(doc(b,'accounts/bob/settings/moilyProfile'),{...draft,nickname:'Bob'}));
+ await assertSucceeds(updateDoc(doc(b,'accounts/bob/settings/moilyProfile'),{onboardingCompleted:true,updatedAt:serverTimestamp()}));
+ console.log('64 assertions passed');
 } finally { await env.cleanup(); }
