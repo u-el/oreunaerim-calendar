@@ -1,0 +1,40 @@
+/* Moily foundations — scoped opt-in; legacy UI remains unchanged. */
+.moily {
+  --moily-forest:#183C2B; --moily-green:#2F6B4F; --moily-soft:#8BB99B;
+  --moily-light:#E1EDE4; --moily-cloud:#F3F6F4; --moily-white:#FFFFFF;
+  --moily-text:var(--moily-forest); --moily-action:var(--moily-green);
+  --moily-page:var(--moily-cloud); --moily-card:var(--moily-white);
+  --moily-selected:var(--moily-light); --moily-on-action:#FFFFFF;
+  --moily-border:#E1EDE4; --moily-error:#B42318;
+  --moily-hiking:#2F6B4F; --moily-food:#F4D36A; --moily-play:#A5D8F3; --moily-backpacking:#BCA8E8;
+  --moily-space-4:4px; --moily-space-8:8px; --moily-space-12:12px; --moily-space-16:16px;
+  --moily-space-20:20px; --moily-space-24:24px; --moily-space-32:32px; --moily-space-40:40px; --moily-space-48:48px; --moily-space-64:64px;
+  --moily-radius-8:8px; --moily-radius-12:12px; --moily-radius-16:16px; --moily-radius-24:24px; --moily-radius-pill:999px;
+  --moily-font:"Pretendard Variable",Pretendard,system-ui,sans-serif;
+  --moily-number-font:Manrope,var(--moily-font);
+  color-scheme:light; color:var(--moily-text); background:var(--moily-page); font:400 1rem/1.5 var(--moily-font);
+}
+.moily[data-theme="dark"] {
+  color-scheme:dark; --moily-text:#E5EEE8; --moily-page:#151D18; --moily-card:#232F27;
+  --moily-selected:#34483A; --moily-border:#758F7C; --moily-error:#FFB4AB; --moily-hiking:#8BB99B;
+}
+@media(prefers-color-scheme:dark) {
+ .moily[data-theme="system"] {
+  color-scheme:dark; --moily-text:#E5EEE8; --moily-page:#151D18; --moily-card:#232F27;
+  --moily-selected:#34483A; --moily-border:#758F7C; --moily-error:#FFB4AB; --moily-hiking:#8BB99B;
+ }
+}
+.moily .moily-display{font-size:2rem;font-weight:700;line-height:1.5}
+.moily .moily-heading{font-size:1.5rem;font-weight:700;line-height:1.5}
+.moily .moily-card-title{font-size:1.25rem;font-weight:600;line-height:1.5}
+.moily .moily-caption{font-size:.75rem;line-height:1.5}
+.moily .moily-number{font:600 1.5rem/1.25 var(--moily-number-font);font-variant-numeric:tabular-nums}
+.moily .moily-panel{background:var(--moily-card);border:1px solid var(--moily-border);border-radius:var(--moily-radius-16);padding:var(--moily-space-16);min-width:0}
+.moily .moily-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;border:1px solid var(--moily-action);border-radius:12px;background:var(--moily-action);color:var(--moily-on-action);font:500 1rem/1.5 var(--moily-font);cursor:pointer}
+.moily .moily-button--secondary{background:var(--moily-selected);color:var(--moily-text);border-color:var(--moily-border)}
+.moily .moily-button:disabled{opacity:.55;cursor:not-allowed}
+.moily .moily-input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--moily-border);border-radius:12px;background:var(--moily-card);color:var(--moily-text);font:inherit}
+.moily .moily-chip{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;background:var(--moily-selected);color:var(--moily-text);font-size:.75rem}
+.moily :focus-visible{outline:3px solid var(--moily-hiking);outline-offset:3px}
+.moily .moily-error{color:var(--moily-error)}
+@media(prefers-reduced-motion:reduce){.moily *,.moily *::before,.moily *::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
