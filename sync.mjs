@@ -150,3 +150,20 @@ export async function ensureMoilyProfile(uid) {
     return draft;
   });
 }
+
+export async function getMoilyConsent(uid) {
+  if(auth.currentUser?.uid!==uid) throw new Error('Account mismatch');
+  const snap=await getDoc(doc(db,'accounts',uid,'settings','moilyConsent'));
+  return snap.exists()?snap.data():null;
+}
+export async function saveMoilyConsent(uid, choices) {
+  if(auth.currentUser?.uid!==uid || choices.terms!==true || choices.privacy!==true || typeof choices.marketing!=='boolean') throw new Error('Invalid consent');
+  const ref=doc(db,'accounts',uid,'settings','moilyConsent');
+  return runTransaction(db,async tx=>{
+    const snap=await tx.get(ref);
+    if(snap.exists()) return snap.data();
+    const data={termsVersion:'test-1',privacyVersion:'test-1',termsAccepted:true,privacyAccepted:true,marketingAccepted:choices.marketing};
+    tx.set(ref,{...data,acceptedAt:serverTimestamp()});
+    return data;
+  });
+}
