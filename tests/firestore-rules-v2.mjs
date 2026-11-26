@@ -30,5 +30,25 @@ try {
  await assertFails(setDoc(doc(a,'sharesV2','d'.repeat(32)),{revokedAt:null,expiresAt:null}));
  await assertSucceeds(setDoc(doc(a,'accounts/alice/schedules/legacy'),{id:'legacy',name:'Legacy',gear:[],certified:[]}));
  await assertFails(getDoc(doc(b,'accounts/alice/schedules/legacy')));
- console.log('17 assertions passed');
+ const profile='accounts/alice/settings/moilyProfile';
+ const draft={schemaVersion:2,nickname:'',interests:[],onboardingCompleted:false,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+ await assertSucceeds(getDoc(doc(a,profile)));
+ await assertFails(setDoc(doc(b,profile),draft));
+ await assertFails(setDoc(doc(guest,profile),draft));
+ await assertSucceeds(setDoc(doc(a,profile),draft));
+ await assertSucceeds(getDoc(doc(a,profile)));
+ await assertFails(getDoc(doc(b,profile)));
+ await assertFails(getDoc(doc(guest,profile)));
+ await assertFails(updateDoc(doc(b,profile),{nickname:'bad',updatedAt:serverTimestamp()}));
+ await assertSucceeds(updateDoc(doc(a,profile),{nickname:'테스트',interests:['hiking','running'],updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,profile),{nickname:'x'.repeat(21),updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,profile),{interests:['invalid'],updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,profile),{interests:Array(6).fill('hiking'),updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,profile),{onboardingCompleted:true,updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,profile),{createdAt:Timestamp.fromMillis(1),updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,profile),{updatedAt:Timestamp.fromMillis(1)}));
+ await assertFails(updateDoc(doc(a,profile),{extra:true,updatedAt:serverTimestamp()}));
+ await assertFails(deleteDoc(doc(a,profile)));
+ await assertFails(getDocs(collection(a,'accounts/alice/settings')));
+ console.log('35 assertions passed');
 } finally { await env.cleanup(); }
