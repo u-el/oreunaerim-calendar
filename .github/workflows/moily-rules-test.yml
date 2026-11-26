@@ -1,0 +1,23 @@
+name: Moily Firestore rules test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rules:
+    if: github.ref == 'refs/heads/develop/moily'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm install --no-save --package-lock=false firebase@11 @firebase/rules-unit-testing@4 firebase-tools@14
+      - run: |
+          printf '%s\n' '{"firestore":{"rules":"firestore.rules"},"emulators":{"firestore":{"port":8080},"ui":{"enabled":false}}}' > firebase.emulator.json
+          npx firebase emulators:exec --config firebase.emulator.json --project demo-moily --only firestore "node tests/firestore-rules-v2.mjs"
