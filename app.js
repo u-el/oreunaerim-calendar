@@ -2,7 +2,7 @@
 
 const $ = selector => document.querySelector(selector);
 const names = value => value.split('·').map(part => part.trim()).filter(Boolean);
-const key = 'seom-mountain-log:v1';
+const key = 'moily-dev:schedules:v1';
 const certificationGoals = {classic:100, plus:114, island:100};
 const categories = {
   personal: '개인 산행',
@@ -1577,7 +1577,7 @@ function renderAccountBanner() {
   try { dismissed = localStorage.getItem(bannerKey) === '1'; } catch {}
   banner.hidden = Boolean(account) || !sync || dismissed || showingHikeFeed || !navigator.onLine;
 }
-const bannerKey = 'oreunaerim:account-banner-dismissed';
+const bannerKey = 'moily-dev:account-banner-dismissed';
 
 function dDayLabel(record) {
   const day = date => Date.UTC(...date.split('-').map((part, index) => Number(part) - (index === 1 ? 1 : 0)));
@@ -2394,14 +2394,14 @@ function addGearPreset(name) {
 }
 
 /* ---- 내 준비물 세트 ---- */
-const gearSetKey = 'oreunaerim:gear-sets:v1';
+const gearSetKey = 'moily-dev:gear-sets:v1';
 const gearSetLimit = 20;
 const gearSetItemLimit = 60;
 /* ---- 닉네임 ---- */
 let nickname = '';
 let stopProfile;
-const nicknameKey = uid => 'oreunaerim:nickname:' + uid;
-const nicknameSkipKey = uid => 'oreunaerim:nickname-skip:' + uid;
+const nicknameKey = uid => 'moily-dev:nickname:' + uid;
+const nicknameSkipKey = uid => 'moily-dev:nickname-skip:' + uid;
 const cleanNickname = value => String(value || '').normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 20);
 
 function renderNickname() {
@@ -2639,7 +2639,7 @@ const weatherCodes = [[0,'☀️','맑음'],[2,'🌤️','구름 조금'],[3,'�
 const weatherOf = code => weatherCodes.find(([max]) => code <= max) || weatherCodes.at(-1);
 const placeCache = new Map();
 const weatherCache = new Map();
-const placeKey = 'oreunaerim:places:v1';
+const placeKey = 'moily-dev:places:v1';
 try { for (const [name, value] of Object.entries(JSON.parse(localStorage.getItem(placeKey) || '{}'))) placeCache.set(name, value); } catch {}
 
 function placeQueries(record) {
@@ -2730,7 +2730,7 @@ async function showWeather(target, record) {
   } catch {}
 }
 
-const colorKey = 'oreunaerim:color-scheme';
+const colorKey = 'moily-dev:color-scheme';
 const systemDark = matchMedia('(prefers-color-scheme: dark)');
 function applyColorScheme() {
   let saved = '';
@@ -2753,7 +2753,7 @@ $('#color-toggle')?.addEventListener('click', () => {
 });
 applyColorScheme();
 
-const installKey = 'oreunaerim:install-dismissed';
+const installKey = 'moily-dev:install-dismissed';
 let installPrompt = null;
 function renderInstallCard() {
   const card = $('#install-card');
@@ -2832,9 +2832,9 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     .then(() => new Promise(resolve => setTimeout(resolve, 5000))).then(async () => {
     // 첫 방문 때는 서비스 워커가 늦게 켜져서 이미 받은 파일이 저장되지 않으므로 직접 저장
     const urls = [location.origin + location.pathname, ...performance.getEntriesByType('resource').map(entry => entry.name)]
-      .filter(url => url.startsWith(location.origin + '/') || url.startsWith('https://www.gstatic.com/firebasejs/') || url.startsWith('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@'))
+      .filter(url => url.startsWith(new URL('./', location.href).href) || url.startsWith('https://www.gstatic.com/firebasejs/') || url.startsWith('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@'))
       .filter(url => !/\/sw\.js(\?|$)/.test(url));
-    const cache = await caches.open('oreunaerim-offline-v5');
+    const cache = await caches.open('moily-dev-offline-v1');
     await Promise.all(urls.map(async url => {
       if (await cache.match(url)) return;
       const response = await fetch(url, {cache:'force-cache', mode:'cors'}).catch(() => null);
