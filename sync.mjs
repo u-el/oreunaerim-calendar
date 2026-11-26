@@ -212,3 +212,15 @@ export async function createMoilyFirstClub(uid,{category,name,description,color}
  return club;
  });
 }
+
+export async function completeMoilyOnboarding(uid){
+ if(auth.currentUser?.uid!==uid)throw new Error('Account mismatch');
+ const ref=doc(db,'accounts',uid,'settings','moilyProfile');
+ return runTransaction(db,async tx=>{
+ const [p,c,club]=await Promise.all([tx.get(ref),tx.get(doc(db,'accounts',uid,'settings','moilyConsent')),tx.get(doc(db,'accounts',uid,'clubs','onboarding-first'))]);
+ const profile=p.data(),consent=c.data();
+ if(!profile?.nickname?.trim()||consent?.termsAccepted!==true||consent?.privacyAccepted!==true||consent?.termsVersion!=='test-1'||consent?.privacyVersion!=='test-1')throw new Error('Incomplete onboarding');
+ if(!profile.onboardingCompleted)tx.update(ref,{onboardingCompleted:true,updatedAt:serverTimestamp()});
+ return {nickname:profile.nickname,club:club.exists()?club.data():null};
+ });
+}
