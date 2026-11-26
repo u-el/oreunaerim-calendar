@@ -167,3 +167,16 @@ export async function saveMoilyConsent(uid, choices) {
     return data;
   });
 }
+
+export async function saveMoilyProfile(uid,nickname,interests) {
+  nickname=nickname.trim();
+  const allowed=['hiking','running','cycling','tennis','other'];
+  if(auth.currentUser?.uid!==uid || !nickname || nickname.length>20 || !Array.isArray(interests) || interests.length>5 || interests.some(x=>!allowed.includes(x))) throw new Error('Invalid profile');
+  const ref=doc(db,'accounts',uid,'settings','moilyProfile');
+  return runTransaction(db,async tx=>{
+    const snap=await tx.get(ref);
+    if(!snap.exists()||snap.data().onboardingCompleted!==false)throw new Error('Invalid draft');
+    tx.update(ref,{nickname,interests:[...new Set(interests)],updatedAt:serverTimestamp()});
+    return {...snap.data(),nickname,interests:[...new Set(interests)]};
+  });
+}
