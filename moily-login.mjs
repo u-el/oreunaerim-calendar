@@ -56,16 +56,25 @@ function refreshClub(){
  createClub.disabled=clubSaving||!clubName.value.trim();skipClub.disabled=clubSaving;
  [clubName,clubDescription,clubColor,...$('club-types').querySelectorAll('input')].forEach(x=>x.disabled=clubSaving);
 }
-function finishClub(message){$('club-step').hidden=true;status(message);$('continue').hidden=false;}
+async function finishClub(){
+ const uid=account.uid;
+ const result=await api.completeMoilyOnboarding(uid);
+ if(account?.uid!==uid)return;
+ $('club-step').hidden=true;$('profile-step').hidden=true;$('continue').hidden=true;
+ $('welcome-name').textContent=result.nickname+'님, 모일리에 오신 것을 환영해요!';
+ const card=$('welcome-club');card.hidden=!result.club;card.textContent='';
+ if(result.club){card.textContent=result.club.name+' · '+api.moilyClubTemplates[result.club.category]?.label+' · 첫 동호회';card.style.border='2px solid '+result.club.color;}
+ $('welcome').hidden=false;status('가입 완료');
+}
 const createClub=button('첫 동호회 만들기',{disabled:true,onClick:async()=>{
  if(clubSaving||!account||!clubName.value.trim())return;
  const uid=account.uid;clubSaving=true;refreshClub();
  try{await api.createMoilyFirstClub(uid,{category:selectedClubType(),name:clubName.value,description:clubDescription.value,color:clubColor.value});
- if(account?.uid===uid)finishClub('첫 동호회 생성 완료. 온보딩 완료 처리는 다음 단계에서 연결됩니다.');
+ if(account?.uid===uid)await finishClub();
  }catch{if(account?.uid===uid)status('동호회를 저장하지 못했어요. 다시 시도해 주세요.');}
  finally{clubSaving=false;refreshClub();}
 }});
-const skipClub=button('나중에 만들기',{variant:'secondary',onClick:()=>{if(account&&!clubSaving)finishClub('동호회 생성을 건너뛰었어요. 온보딩 완료 처리는 다음 단계에서 연결됩니다.');}});
+const skipClub=button('나중에 만들기',{variant:'secondary',onClick:async()=>{if(!account||clubSaving)return;const uid=account.uid;clubSaving=true;refreshClub();try{await finishClub();}catch{if(account?.uid===uid)status('가입 완료 상태를 저장하지 못했어요. 다시 시도해 주세요.');}finally{clubSaving=false;refreshClub();}}});
 $('club-create').append(createClub);$('club-skip').append(skipClub);
 [clubName,clubDescription,clubColor].forEach(x=>x.addEventListener('input',refreshClub));
 function showClub(){
@@ -75,14 +84,14 @@ function showClub(){
  Object.entries(api.moilyClubTemplates).forEach(([key,t])=>{const label=document.createElement('label'),input=document.createElement('input');input.type='radio';input.name='club-type';input.value=key;input.checked=key===preferred;label.append(input,document.createTextNode(clubIcons[key]+' '+t.label));group.append(label);input.addEventListener('change',()=>{clubColor.value=t.color;refreshClub();});});
  clubName.value='';clubDescription.value='';clubColor.value=api.moilyClubTemplates[selectedClubType()].color;refreshClub();$('club-step').hidden=false;status('첫 동호회를 만들거나 나중에 만들 수 있어요.');
 }
-async function resumeClub(){const uid=account.uid;const existing=await api.getMoilyFirstClub(uid);if(account?.uid!==uid)return;if(existing)finishClub('첫 동호회 생성 완료. 온보딩 완료 처리는 다음 단계에서 연결됩니다.');else showClub();}
+async function resumeClub(){const uid=account.uid;const existing=await api.getMoilyFirstClub(uid);if(account?.uid!==uid)return;if(existing){showClub();clubName.value=existing.name;clubDescription.value=existing.description||'';clubColor.value=existing.color;const radio=[...$('club-types').querySelectorAll('input')].find(x=>x.value===existing.category);if(radio)radio.checked=true;refreshClub();await finishClub();}else showClub();}
 try{api=await import('./sync.mjs');let generation=0;api.observeAccount(async user=>{
- const current=++generation;account=user;draftProfile=null;$('club-step').hidden=true;clubName.value='';clubDescription.value='';$('profile-step').hidden=true;nickname.value='';interests.forEach(x=>x.checked=false);refreshProfile();$('consent').hidden=true;choices.forEach(x=>x.checked=false);refreshConsent();ready=true;google.disabled=busy||!!user;
+ const current=++generation;account=user;draftProfile=null;$('welcome').hidden=true;$('welcome-name').textContent='';$('welcome-club').textContent='';$('club-step').hidden=true;clubName.value='';clubDescription.value='';$('profile-step').hidden=true;nickname.value='';interests.forEach(x=>x.checked=false);refreshProfile();$('consent').hidden=true;choices.forEach(x=>x.checked=false);refreshConsent();ready=true;google.disabled=busy||!!user;
  $('google').hidden=!!user;$('continue').hidden=true;$('logout').hidden=!user;
  if(!user){status('Google 계정으로 로그인해 주세요.');return;}
  status('모일리 프로필 확인 중…');
  try{const profile=await api.ensureMoilyProfile(user.uid);if(current!==generation)return;draftProfile=profile;
- if(profile.onboardingCompleted===true){status('모일리 가입 완료 계정입니다.');$('continue').hidden=false;return;}
+ if(profile.onboardingCompleted===true){status('모일리 가입 완료 계정입니다.');location.replace('./');return;}
  const consent=await api.getMoilyConsent(user.uid);if(current!==generation)return;
  if(consent?.termsVersion==='test-1'&&consent?.privacyVersion==='test-1'&&consent.termsAccepted===true&&consent.privacyAccepted===true){await resumeProfile();}
  else{status('가입을 위해 약관에 동의해 주세요.');$('consent').hidden=false;}
