@@ -9,13 +9,31 @@ const google=button('Google로 계속하기',{variant:'secondary',disabled:true,
 $('google').append(google);
 const out=button('로그아웃',{variant:'secondary',onClick:async()=>{out.disabled=true;try{await api.logout();}catch{status('로그아웃하지 못했어요. 다시 시도해 주세요.');out.disabled=false;}}});
 $('logout').append(out);
+const choices=['terms','privacy','marketing'].map($);
+const all=$('all-consent');
+let saving=false;
+const next=button('다음',{disabled:true,onClick:async()=>{
+ if(saving||!account||!choices[0].checked||!choices[1].checked)return;
+ const uid=account.uid;saving=true;refreshConsent();
+ try{await api.saveMoilyConsent(uid,{terms:choices[0].checked,privacy:choices[1].checked,marketing:choices[2].checked});
+ if(account?.uid!==uid)return;
+ $('consent').hidden=true;status('약관 동의 완료. 닉네임 설정은 다음 단계에서 연결됩니다.');$('continue').hidden=false;
+ }catch{if(account?.uid===uid)status('동의를 저장하지 못했어요. 다시 시도해 주세요.');}
+ finally{saving=false;refreshConsent();}
+}});
+$('consent-next').append(next);
+function refreshConsent(){all.checked=choices.every(x=>x.checked);all.indeterminate=!all.checked&&choices.some(x=>x.checked);next.disabled=saving||!choices[0].checked||!choices[1].checked;all.disabled=saving;choices.forEach(x=>x.disabled=saving);}
+all.addEventListener('change',()=>{choices.forEach(x=>x.checked=all.checked);refreshConsent();});
+choices.forEach(x=>x.addEventListener('change',refreshConsent));
 try{api=await import('./sync.mjs');let generation=0;api.observeAccount(async user=>{
- const current=++generation;account=user;ready=true;google.disabled=busy||!!user;
+ const current=++generation;account=user;$('consent').hidden=true;choices.forEach(x=>x.checked=false);refreshConsent();ready=true;google.disabled=busy||!!user;
  $('google').hidden=!!user;$('continue').hidden=true;$('logout').hidden=!user;
  if(!user){status('Google 계정으로 로그인해 주세요.');return;}
  status('모일리 프로필 확인 중…');
  try{const profile=await api.ensureMoilyProfile(user.uid);if(current!==generation)return;
- status(profile.onboardingCompleted===true?'모일리 가입 완료 계정입니다.':'신규 또는 가입 진행 중인 계정입니다. 온보딩은 다음 단계에서 연결됩니다.');
- $('continue').hidden=false;
+ if(profile.onboardingCompleted===true){status('모일리 가입 완료 계정입니다.');$('continue').hidden=false;return;}
+ const consent=await api.getMoilyConsent(user.uid);if(current!==generation)return;
+ if(consent?.termsVersion==='test-1'&&consent?.privacyVersion==='test-1'&&consent.termsAccepted===true&&consent.privacyAccepted===true){status('약관 동의 완료. 닉네임 설정은 다음 단계에서 연결됩니다.');$('continue').hidden=false;}
+ else{status('가입을 위해 약관에 동의해 주세요.');$('consent').hidden=false;}
  }catch(e){if(current!==generation)return;status('프로필을 확인하지 못했어요. 연결 및 개발용 보안 규칙을 확인한 뒤 새로고침해 주세요.');}
  });}catch{status('인증을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.');}
