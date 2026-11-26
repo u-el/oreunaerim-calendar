@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, getDoc, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, getDoc, serverTimestamp, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const app = initializeApp({
   apiKey: "AIzaSyD4uA0-Pyc-Gs0Ek_ZAZ3tgEh4dSb7o8i8",
@@ -137,4 +137,16 @@ export async function createShare(uid, payload) {
 export async function getShare(id) {
   const snapshot = await getDoc(doc(db, 'shares', id));
   return snapshot.exists() ? snapshot.data() : null;
+}
+
+export async function ensureMoilyProfile(uid) {
+  if (!auth.currentUser || auth.currentUser.uid !== uid) throw new Error('Account mismatch');
+  const ref = doc(db,'accounts',uid,'settings','moilyProfile');
+  return runTransaction(db, async tx => {
+    const snapshot = await tx.get(ref);
+    if (snapshot.exists()) return snapshot.data();
+    const draft = {schemaVersion:2,nickname:'',interests:[],onboardingCompleted:false};
+    tx.set(ref,{...draft,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    return draft;
+  });
 }
