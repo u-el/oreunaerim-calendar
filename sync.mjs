@@ -3,10 +3,12 @@ import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signO
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, getDoc, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const app = initializeApp({
-  apiKey: 'AIzaSyAvNt0OvhibmXN4wZr1gjP2UZMO91jnyR8',
-  authDomain: 'oreunaerim-calendar.firebaseapp.com',
-  projectId: 'oreunaerim-calendar',
-  appId: '1:810927578233:web:ac23ad3356a1fb4e4d88a8'
+  apiKey: "AIzaSyD4uA0-Pyc-Gs0Ek_ZAZ3tgEh4dSb7o8i8",
+  authDomain: "moily-dev-be0d4.firebaseapp.com",
+  projectId: "moily-dev-be0d4",
+  storageBucket: "moily-dev-be0d4.firebasestorage.app",
+  messagingSenderId: "837889312863",
+  appId: "1:837889312863:web:3c3d310f5dd9e06b8cf3ea"
 });
 const auth = getAuth(app);
 // 마지막으로 받은 계정 일정을 기기에 저장해 두고 오프라인에서도 보여 줌
