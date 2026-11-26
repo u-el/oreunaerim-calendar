@@ -71,12 +71,16 @@ service cloud.firestore {
           && d.nickname is string && d.nickname.size() <= 20
           && d.interests is list && d.interests.size() <= 5
           && d.interests.hasOnly(['hiking','running','cycling','tennis','other'])
-          && d.onboardingCompleted == false
+          && d.onboardingCompleted is bool
           && d.createdAt is timestamp && d.updatedAt == request.time;
       }
       allow get: if owner(uid);
-      allow create: if owner(uid) && validProfile() && request.resource.data.createdAt == request.time;
-      allow update: if owner(uid) && validProfile() && request.resource.data.createdAt == resource.data.createdAt;
+      allow create: if owner(uid) && validProfile() && request.resource.data.onboardingCompleted == false && request.resource.data.createdAt == request.time;
+      allow update: if owner(uid) && validProfile() && request.resource.data.createdAt == resource.data.createdAt
+        && (resource.data.onboardingCompleted == false || request.resource.data.onboardingCompleted == true)
+        && (request.resource.data.onboardingCompleted == false || (shortText(request.resource.data.nickname,20)
+          && get(/databases/$(database)/documents/accounts/$(uid)/settings/moilyConsent).data.termsAccepted == true
+          && get(/databases/$(database)/documents/accounts/$(uid)/settings/moilyConsent).data.privacyAccepted == true));
       allow list, delete: if false;
     }
 
