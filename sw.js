@@ -6,7 +6,7 @@
 // - Firebase SDK, Pretendard 글꼴: 버전이 주소에 들어 있어 저장본 우선
 // - 일정 데이터, 로그인, 날씨 요청은 건드리지 않음
 
-const CACHE = 'oreunaerim-offline-v6';
+const CACHE = 'moily-dev-offline-v1';
 const CORE = [
   './',
   './index.html',
@@ -26,7 +26,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(key => key.startsWith('oreunaerim-') && key !== CACHE).map(key => caches.delete(key))))
+    .then(keys => Promise.all(keys.filter(key => key.startsWith('moily-dev-offline-') && key !== CACHE).map(key => caches.delete(key))))
     .then(() => self.clients.claim()));
 });
 
