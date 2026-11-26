@@ -40,5 +40,120 @@ service cloud.firestore {
         && request.resource.data.sets is list
         && request.resource.data.sets.size() <= 200;
     }
+
+    // Moily V2: owner-only, default deny. Initial schema; emulator tests required.
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function common(id) {
+      let d = request.resource.data;
+      return d.id == id && d.schemaVersion == 2
+        && d.version is int && d.version >= 1
+        && d.createdAt is timestamp && d.updatedAt == request.time
+        && (d.deletedAt == null || d.deletedAt is timestamp);
+    }
+    function initial(id) {
+      return common(id) && request.resource.data.version == 1
+        && request.resource.data.createdAt == request.time;
+    }
+    function revision(id) {
+      return common(id) && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.version == resource.data.version + 1;
+    }
+    function shortText(v, n) { return v is string && v.size() > 0 && v.size() <= n; }
+
+    match /accounts/{uid}/clubs/{id} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(["name","status","description","category","color","icon","region","joinedAt","isPrimary","isFavorite","sortOrder","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.name, 200) && shortText(d.status, 200);
+      }
+      allow read: if owner(uid);
+      allow create: if owner(uid) && initial(id) && valid();
+      allow update: if owner(uid) && revision(id) && valid();
+      allow delete: if false;
+    }
+
+    match /accounts/{uid}/activityTypes/{id} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(["clubId","name","color","icon","templateId","sortOrder","isHidden","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.clubId, 200) && shortText(d.name, 200);
+      }
+      allow read: if owner(uid);
+      allow create: if owner(uid) && initial(id) && valid();
+      allow update: if owner(uid) && revision(id) && valid();
+      allow delete: if false;
+    }
+
+    match /accounts/{uid}/customFields/{id} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(["clubId","activityTypeId","label","type","required","options","sortOrder","status","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.clubId, 200) && shortText(d.label, 200) && shortText(d.type, 200);
+      }
+      allow read: if owner(uid);
+      allow create: if owner(uid) && initial(id) && valid();
+      allow update: if owner(uid) && revision(id) && valid();
+      allow delete: if false;
+    }
+
+    match /accounts/{uid}/schedulesV2/{id} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(["clubId","activityTypeId","title","status","startAt","endAt","startDate","endDate","location","participants","transport","budget","memo","gear","customValues","recurrence","sourceId","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.clubId, 200) && shortText(d.activityTypeId, 200) && shortText(d.title, 200) && shortText(d.status, 200);
+      }
+      allow read: if owner(uid);
+      allow create: if owner(uid) && initial(id) && valid();
+      allow update: if owner(uid) && revision(id) && valid();
+      allow delete: if false;
+    }
+
+    match /accounts/{uid}/activities/{id} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(["clubId","activityTypeId","completedAt","scheduleId","actualDistance","actualDuration","actualCost","review","attachmentIds","customValues","status","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.clubId, 200) && shortText(d.activityTypeId, 200) && d.completedAt is timestamp;
+      }
+      allow read: if owner(uid);
+      allow create: if owner(uid) && initial(id) && valid();
+      allow update: if owner(uid) && revision(id) && valid();
+      allow delete: if false;
+    }
+
+    match /accounts/{uid}/goals/{id} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(["clubId","title","targetValue","status","metricType","baseline","unit","period","displayType","achievedAt","achievementSnapshot","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.title, 200) && d.targetValue is number && d.targetValue > 0 && shortText(d.status, 200);
+      }
+      allow read: if owner(uid);
+      allow create: if owner(uid) && initial(id) && valid();
+      allow update: if owner(uid) && revision(id) && valid();
+      allow delete: if false;
+    }
+
+    match /accounts/{uid}/certifications/{id} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(["catalogId","targetId","status","activityId","certifiedAt","clubId","id","schemaVersion","version","createdAt","updatedAt","deletedAt"]) && shortText(d.catalogId, 200) && shortText(d.targetId, 200) && shortText(d.status, 200);
+      }
+      allow read: if owner(uid);
+      allow create: if owner(uid) && initial(id) && valid();
+      allow update: if owner(uid) && revision(id) && valid();
+      allow delete: if false;
+    }
+    match /accounts/{uid}/preferences/{id} {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && id in ['common','mobile','tablet','desktop']
+        && request.resource.data.keys().hasOnly(['theme','brandColor','fontScale','homeLayout','deviceLayouts','calendarView','primaryGoalId','calendarColorMode','updatedAt'])
+        && request.resource.data.updatedAt == request.time;
+    }
+    // Trusted backend only until attachment, migration and backup workflows are implemented.
+    match /accounts/{uid}/{collection}/{id} {
+      allow read: if owner(uid) && collection in ['attachments','migration','backups'];
+    }
+    match /catalogs/{id} { allow read: if request.auth != null; }
+    // Public share metadata and payload are separate. Backend creates/revokes both.
+    match /shareOwnersV2/{id} { allow get: if owner(resource.data.ownerId); }
+    match /sharesV2/{id} {
+      allow get: if id.matches('^[A-Za-z0-9_-]{32,64}$')
+        && resource.data.revokedAt == null
+        && (resource.data.expiresAt == null || request.time < resource.data.expiresAt);
+      allow list, create, update, delete: if false;
+    }
   }
 }
