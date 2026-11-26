@@ -180,3 +180,35 @@ export async function saveMoilyProfile(uid,nickname,interests) {
     return {...snap.data(),nickname,interests:[...new Set(interests)]};
   });
 }
+
+export const moilyClubTemplates={
+ hiking:{label:'등산',icon:'mountain',color:'#2F6B4F',activities:['산행','백패킹','먹벙','놀이벙']},
+ running:{label:'러닝',icon:'footprints',color:'#E58D65',activities:['러닝','훈련','대회']},
+ cycling:{label:'자전거',icon:'bike',color:'#629FC7',activities:['라이딩','훈련','대회']},
+ tennis:{label:'테니스',icon:'circle-dot',color:'#91AB56',activities:['연습','경기','레슨']},
+ other:{label:'기타',icon:'shapes',color:'#9A83C7',activities:['정기 모임','번개 모임']}
+};
+export async function getMoilyFirstClub(uid){
+ if(auth.currentUser?.uid!==uid)throw new Error('Account mismatch');
+ const snap=await getDoc(doc(db,'accounts',uid,'clubs','onboarding-first'));
+ return snap.exists()?snap.data():null;
+}
+export async function createMoilyFirstClub(uid,{category,name,description,color}){
+ name=name.trim();description=description.trim();
+ const template=Object.hasOwn(moilyClubTemplates,category)?moilyClubTemplates[category]:null;
+ if(auth.currentUser?.uid!==uid||!template||!name||name.length>60||description.length>300||!/^#[0-9A-Fa-f]{6}$/.test(color))throw new Error('Invalid club');
+ const id='onboarding-first',ref=doc(db,'accounts',uid,'clubs',id);
+ return runTransaction(db,async tx=>{
+ const [existing,profile,consent]=await Promise.all([tx.get(ref),tx.get(doc(db,'accounts',uid,'settings','moilyProfile')),tx.get(doc(db,'accounts',uid,'settings','moilyConsent'))]);
+ if(existing.exists())return existing.data();
+ if(!profile.data()?.nickname?.trim()||profile.data()?.onboardingCompleted!==false||consent.data()?.termsAccepted!==true||consent.data()?.privacyAccepted!==true)throw new Error('Incomplete onboarding');
+ const common={schemaVersion:2,version:1,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),deletedAt:null};
+ const club={id,name,description,category,color,icon:template.icon,status:'active',isPrimary:true,isFavorite:false,sortOrder:0};
+ const refs=template.activities.map((_,i)=>doc(db,'accounts',uid,'activityTypes',id+'-'+i));
+ const prior=await Promise.all(refs.map(r=>tx.get(r)));
+ if(prior.some(x=>x.exists()))throw new Error('Template conflict');
+ tx.set(ref,{...club,...common});
+ template.activities.forEach((name,i)=>tx.set(refs[i],{...common,id:refs[i].id,clubId:id,name,color:category==='hiking'?['#2F6B4F','#BCA8E8','#F4D36A','#A5D8F3'][i]:color,icon:template.icon,templateId:category,sortOrder:i,isHidden:false}));
+ return club;
+ });
+}
