@@ -247,3 +247,17 @@ export async function linkMoilyLogin(uid,kind) {
  const result=await linkWithPopup(user,p);
  if(result.user.uid!==uid||auth.currentUser?.uid!==uid)throw new Error('Account changed');
 }
+
+const moilyThemes=['system','light','dark'];
+export function observeMoilyTheme(uid,onTheme,onError){
+ if(auth.currentUser?.uid!==uid)throw new Error('Account mismatch');
+ return onSnapshot(doc(db,'accounts',uid,'preferences','common'),{includeMetadataChanges:true},snap=>{
+  if(auth.currentUser?.uid!==uid)return;
+  const value=snap.data()?.theme;
+  onTheme(moilyThemes.includes(value)?value:'system',snap.metadata);
+ },onError);
+}
+export function saveMoilyTheme(uid,theme){
+ if(auth.currentUser?.uid!==uid||!moilyThemes.includes(theme))throw new Error('Invalid theme or account');
+ return setDoc(doc(db,'accounts',uid,'preferences','common'),{theme,updatedAt:serverTimestamp()},{merge:true});
+}
