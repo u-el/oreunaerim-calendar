@@ -1,6 +1,11 @@
 import {navigation} from './moily-components.mjs';
 const $=id=>document.getElementById(id);
 const routes={home:'홈',clubs:'동호회',calendar:'캘린더',activity:'활동 기록',my:'마이'};
+let stopTheme=()=>{},themeApi=null,themeReady=false,themeBusy=false;
+const themeSelect=$('shell-theme'),themeStatus=$('shell-theme-status');
+function applyTheme(value){document.body.dataset.theme=value;themeSelect.value=value;}
+function resetTheme(){stopTheme();stopTheme=()=>{};themeReady=false;themeBusy=false;applyTheme('system');themeSelect.disabled=true;themeStatus.textContent='설정 확인 중…';}
+function watchTheme(api,account,g){themeApi=api;stopTheme=api.observeMoilyTheme(account,(value,meta)=>{if(g!==generation)return;applyTheme(value);themeReady=!meta.fromCache;themeSelect.disabled=!themeReady||themeBusy;themeStatus.textContent=meta.hasPendingWrites?'저장 중…':meta.fromCache?'오프라인 설정':'계정 설정 동기화 완료';},()=>{if(g!==generation)return;themeReady=false;themeSelect.disabled=true;themeStatus.textContent='설정을 불러오지 못했어요. 새로고침해 주세요.';});}
 const scrolls=new Map();let current=null,uid=null,generation=0;
 const device=()=>matchMedia('(min-width:1200px)').matches?'desktop':matchMedia('(min-width:768px)').matches?'tablet':'mobile';
 const labels={desktop:'PC',tablet:'태블릿',mobile:'모바일'};
@@ -21,4 +26,6 @@ document.querySelector('.shell-skip').addEventListener('click',event=>{event.pre
 for(const link of document.querySelectorAll('.shell-home-link'))link.addEventListener('click',event=>{if(uid&&current==='home'){event.preventDefault();$('shell-main').focus({preventScroll:true});window.scrollTo(0,0);}});
 $('shell-retry').onclick=()=>location.reload();
 function fail(){ $('shell').hidden=true;$('shell-status').hidden=false;$('shell-message').textContent='계정 확인에 실패했어요.';$('shell-retry').hidden=false;}
-try{const api=await import('./sync.mjs');api.observeAccount(async user=>{const g=++generation;$('shell').hidden=true;$('shell-status').hidden=false;$('shell-message').textContent='계정 확인 중…';$('shell-retry').hidden=true;uid=null;current=null;scrolls.clear();if(!user){location.replace('moily-login.html');return;}try{const p=await api.ensureMoilyProfile(user.uid);if(g!==generation)return;if(!p.onboardingCompleted){location.replace('moily-login.html');return;}uid=user.uid;$('shell-status').hidden=true;$('shell').hidden=false;render();}catch{if(g===generation)fail();}});}catch{fail();}
+try{const api=await import('./sync.mjs');api.observeAccount(async user=>{const g=++generation;resetTheme();$('shell').hidden=true;$('shell-status').hidden=false;$('shell-message').textContent='계정 확인 중…';$('shell-retry').hidden=true;uid=null;current=null;scrolls.clear();if(!user){location.replace('moily-login.html');return;}try{const p=await api.ensureMoilyProfile(user.uid);if(g!==generation)return;if(!p.onboardingCompleted){location.replace('moily-login.html');return;}uid=user.uid;$('shell-status').hidden=true;$('shell').hidden=false;render();watchTheme(api,uid,g);}catch{if(g===generation)fail();}});}catch{fail();}
+
+themeSelect.addEventListener('change',async()=>{if(!uid||!themeReady||themeBusy)return;const g=generation,account=uid,previous=document.body.dataset.theme,value=themeSelect.value;themeBusy=true;themeSelect.disabled=true;applyTheme(value);themeStatus.textContent='저장 중…';try{await themeApi.saveMoilyTheme(account,value);}catch{if(g===generation){applyTheme(previous);themeStatus.textContent='저장 실패. 다시 선택해 주세요.';}}finally{if(g===generation){themeBusy=false;themeSelect.disabled=!themeReady;}}});
