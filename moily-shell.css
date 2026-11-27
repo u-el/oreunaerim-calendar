@@ -66,3 +66,15 @@
 #layout-cards>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 #layout-cards label{flex:1 1 100px;overflow-wrap:anywhere}
 #layout-cards button{min-height:44px;color:var(--moily-text);background:var(--moily-card);border:1px solid var(--moily-border);border-radius:8px}
+
+/* Home cards, using the shared design tokens. */
+.moily-home,.home-clubs{display:grid;gap:12px;min-width:0}
+.moily-home{gap:24px}
+.moily-home p,.moily-home h2{margin:0;overflow-wrap:anywhere}
+.home-hero,.home-featured{background:var(--moily-action);color:var(--moily-on-action)}
+.home-hero h2{white-space:pre-line}
+.home-hero .moily-caption,.home-featured .moily-caption,.home-hero .moily-heading,.home-featured .moily-heading,.home-hero .moily-number{color:inherit}
+.shell-content .home-club-link{display:block;text-decoration:none;min-width:0}
+.home-club-link article{width:100%;min-width:0;height:100%}
+.home-other-clubs{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px}
+.home-other-clubs .home-club-link{flex:0 0 min(320px,90%);scroll-snap-align:start}
