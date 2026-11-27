@@ -292,7 +292,7 @@ export function observeMoilyHome(uid,onData,onError){
  state[key]=isCollection?snap.docs.map(d=>({...d.data(),id:d.id})):snap.data()||{};
  onData({...state});
  },error=>{if(active&&auth.currentUser?.uid===uid)onError(key,error);});
- try{stops.push(watch('clubs',['clubs'],true),watch('schedules',['schedulesV2'],true),watch('profile',['settings','moilyProfile'],false));}
+ try{stops.push(watch('clubs',['clubs'],true),watch('schedules',['schedulesV2'],true),watch('profile',['settings','moilyProfile'],false),watch('activityTypes',['activityTypes'],true),watch('goals',['goals'],true),watch('preferences',['preferences','common'],false));}
  catch(error){active=false;stops.forEach(stop=>stop());throw error;}
  return ()=>{active=false;stops.forEach(stop=>stop());};
 }
