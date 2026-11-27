@@ -32,3 +32,20 @@
  #shell-nav .moily-nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;min-height:100px;align-items:start;padding:8px}
  #shell-nav .moily-nav-item{min-width:0;min-height:48px;text-align:center;overflow-wrap:anywhere}
 }
+
+/* Desktop sidebar, scoped to desktop; original icon exports pending. */
+.shell-desktop-brand{display:none}
+@media(min-width:1200px){
+ #shell{grid-template-columns:224px minmax(0,1fr) minmax(0,310px);grid-template-areas:"nav header header" "nav main aside";grid-template-rows:auto 1fr;align-items:start;min-height:100vh;min-height:100dvh;padding:0 24px 24px 0;gap:24px}
+ .shell-header{padding-top:24px}
+ .shell-header .moily-display{display:none}
+ #shell-nav{position:sticky;top:0;align-self:start;min-height:100vh;min-height:100dvh;max-height:100dvh;overflow-y:auto;background:var(--moily-forest);color:#fff;padding:32px 20px 24px}
+ .shell-desktop-brand{display:block;margin-bottom:20px}
+ .shell-desktop-brand p{margin:12px 0 0}
+ #shell-nav .moily-nav{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;padding:0;background:transparent}
+ #shell-nav .moily-nav-item{flex-direction:row;justify-content:flex-start;min-height:48px;padding:12px;gap:12px;border-radius:12px;background:transparent;color:#fff;font-size:16px;overflow-wrap:anywhere}
+ #shell-nav .moily-nav-item[aria-current=page]{background:var(--moily-action);color:var(--moily-on-action)}
+ #shell-nav .moily-nav-item:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+ #shell-main,.shell-aside{overflow-wrap:anywhere;min-width:0}
+ #shell-main .moily-stack,.shell-aside .moily-stack{width:100%}
+}
