@@ -261,3 +261,24 @@ export function saveMoilyTheme(uid,theme){
  if(auth.currentUser?.uid!==uid||!moilyThemes.includes(theme))throw new Error('Invalid theme or account');
  return setDoc(doc(db,'accounts',uid,'preferences','common'),{theme,updatedAt:serverTimestamp()},{merge:true});
 }
+
+export const moilyHomeCards=Object.freeze(['hero','clubs','calendar','upcoming','goals']);
+export function defaultMoilyLayout(){return {homeLayout:{order:[...moilyHomeCards],hidden:[],cardSize:'standard'},calendarView:'month'};}
+export function normalizeMoilyLayout(data){
+ const h=data?.homeLayout;
+ const order=Array.isArray(h?.order)?[...new Set(h.order.filter(x=>moilyHomeCards.includes(x)))]:[];
+ const hidden=Array.isArray(h?.hidden)?[...new Set(h.hidden.filter(x=>moilyHomeCards.includes(x)))]:[];
+ return {homeLayout:{order:[...order,...moilyHomeCards.filter(x=>!order.includes(x))],hidden,cardSize:['standard','compact','large'].includes(h?.cardSize)?h.cardSize:'standard'},calendarView:['month','week','list'].includes(data?.calendarView)?data.calendarView:'month'};
+}
+function moilyLayoutRef(uid,device){
+ if(auth.currentUser?.uid!==uid||!['mobile','tablet','desktop'].includes(device))throw new Error('Invalid device or account');
+ return doc(db,'accounts',uid,'preferences',device);
+}
+export function observeMoilyLayout(uid,device,onLayout,onError){
+ return onSnapshot(moilyLayoutRef(uid,device),{includeMetadataChanges:true},snap=>{
+ if(auth.currentUser?.uid===uid)onLayout(normalizeMoilyLayout(snap.data()),snap.metadata);
+ },onError);
+}
+export function saveMoilyLayout(uid,device,layout){
+ return setDoc(moilyLayoutRef(uid,device),{...normalizeMoilyLayout(layout),updatedAt:serverTimestamp()},{merge:true});
+}
