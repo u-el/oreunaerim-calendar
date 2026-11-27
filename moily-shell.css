@@ -89,3 +89,12 @@
 .home-goal-featured .moily-caption,.home-goal-featured .moily-card-title,.home-goal-featured .moily-number{color:inherit}
 
 .home-quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.home-quick-grid a{justify-content:center;text-align:center;text-decoration:none;min-width:0;min-height:48px;border:1px solid var(--moily-border);border-radius:12px;background:var(--moily-card);color:var(--moily-text);padding:12px;overflow-wrap:anywhere}.moily-home[data-card-size=compact]{gap:12px}.moily-home[data-card-size=compact] .moily-panel{padding:12px;gap:8px}.moily-home[data-card-size=large]{gap:32px}.moily-home[data-card-size=large] .moily-panel{padding:24px;gap:16px}.moily-home[data-card-size=large] .home-calendar-grid .moily-day{height:56px}.moily-home[data-card-size=compact] .home-calendar-grid .moily-day{height:44px}
+
+/* Home contrast: override shared panel and anchor specificity together. */
+.moily .moily-home .home-hero{background:#2F6B4F;color:#fff;border-color:#2F6B4F}
+.moily .moily-home .home-featured,.moily .moily-home .home-goal-featured{background:#183C2B;color:#fff;border-color:#183C2B}
+.moily .moily-home :is(.home-hero,.home-featured,.home-goal-featured) :is(p,h2,h3){color:inherit}
+.moily .moily-home .moily-club:not(.home-featured){background:var(--moily-card);color:var(--moily-text);border:1px solid #8BB99B}
+.moily .moily-home .home-quick-grid a{background:var(--moily-card);color:var(--moily-text);border-color:var(--moily-border)}
+.moily .moily-home[data-card-size=compact] .moily-panel{padding:12px;gap:8px}
+.moily .moily-home[data-card-size=large] .moily-panel{padding:24px;gap:16px}
