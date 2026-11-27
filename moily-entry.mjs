@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
-let generation=0,activeUid=null,started=false;
+let generation=0,activeUid=null,started=false,loaded=false,failed=false,approved=0;
 const lock=()=>{document.body.classList.add('moily-locked');$('moily-entry').hidden=false;for(const d of document.querySelectorAll('dialog[open]'))d.close();};
-const fail=()=>{lock();$('entry-status').textContent='계정 상태를 확인하지 못했어요. 인터넷 연결을 확인해 주세요.';$('entry-retry').hidden=false;};
+const fail=()=>{failed=true;lock();$('entry-status').textContent='계정 상태를 확인하지 못했어요. 인터넷 연결을 확인해 주세요.';$('entry-retry').hidden=false;};
 $('entry-retry').onclick=()=>location.reload();
 function login(){const target=new URL('moily-login.html',location.href);target.hash=location.hash;location.replace(target);}
 try{
@@ -14,10 +14,12 @@ try{
  const profile=await api.ensureMoilyProfile(user.uid);
  if(g!==generation)return;
  if(profile.onboardingCompleted!==true){login();return;}
+ approved=g;
+ if(failed){fail();return;}
  if(!started){
  activeUid=user.uid;started=true;
- const script=document.createElement('script');script.src='app.js?v=moily-entry-1';script.onerror=fail;script.onload=()=>{if(g===generation){$('moily-entry').hidden=true;document.body.classList.remove('moily-locked');}};document.head.append(script);
- }else{$('moily-entry').hidden=true;document.body.classList.remove('moily-locked');}
+ const script=document.createElement('script');script.src='app.js?v=moily-entry-1';script.onerror=fail;script.onload=()=>{loaded=true;if(approved===generation&&!failed){$('moily-entry').hidden=true;document.body.classList.remove('moily-locked');}};document.head.append(script);
+ }else if(loaded){$('moily-entry').hidden=true;document.body.classList.remove('moily-locked');}
  }catch{if(g===generation)fail();}
  });
 }catch{fail();}
