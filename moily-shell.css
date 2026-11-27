@@ -98,3 +98,5 @@
 .moily .moily-home .home-quick-grid a{background:var(--moily-card);color:var(--moily-text);border-color:var(--moily-border)}
 .moily .moily-home[data-card-size=compact] .moily-panel{padding:12px;gap:8px}
 .moily .moily-home[data-card-size=large] .moily-panel{padding:24px;gap:16px}
+
+.moily-clubs-view{display:flex;flex-direction:column;gap:16px;min-width:0}.clubs-filters{display:flex;gap:8px;flex-wrap:wrap}.moily .clubs-filters button{min-height:44px;background:var(--moily-card);color:var(--moily-text);border:1px solid var(--moily-border);padding:8px 12px}.moily .clubs-filters button[aria-pressed=true]{background:#2F6B4F;color:white}.moily .moily-clubs-view .clubs-primary{background:#183C2B;color:white;padding:20px}.moily .clubs-primary :is(p,h3){color:inherit}.clubs-card{overflow-wrap:anywhere}
