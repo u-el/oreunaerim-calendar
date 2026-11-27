@@ -296,3 +296,21 @@ export function observeMoilyHome(uid,onData,onError){
  catch(error){active=false;stops.forEach(stop=>stop());throw error;}
  return ()=>{active=false;stops.forEach(stop=>stop());};
 }
+
+export async function createMoilyClub(uid,{id,category,name,description,color,icon,activities}){
+ name=name.trim();description=description.trim();
+ const template=Object.hasOwn(moilyClubTemplates,category)?moilyClubTemplates[category]:null;
+ if(auth.currentUser?.uid!==uid||!template||!name||name.length>60||description.length>300||!/^#[0-9a-f]{6}$/i.test(color)||!Object.values(moilyClubTemplates).some(t=>t.icon===icon)||!Array.isArray(activities)||activities.length<1||activities.length>20||activities.some(a=>typeof a!=='string'||!a.trim()||a.length>40)||new Set(activities).size!==activities.length||!/^[a-f0-9-]{36}$/.test(id))throw new Error('Invalid club');
+ const ref=doc(db,'accounts',uid,'clubs',id),refs=activities.map((_,i)=>doc(db,'accounts',uid,'activityTypes',id+'-'+i));
+ return runTransaction(db,async tx=>{
+ const [existing,profile,...prior]=await Promise.all([tx.get(ref),tx.get(doc(db,'accounts',uid,'settings','moilyProfile')),...refs.map(r=>tx.get(r))]);
+ if(auth.currentUser?.uid!==uid||profile.data()?.onboardingCompleted!==true)throw new Error('Account changed');
+ if(existing.exists())return existing.data();
+ if(prior.some(x=>x.exists()))throw new Error('Template conflict');
+ const common={schemaVersion:2,version:1,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),deletedAt:null};
+ const club={id,name,description,category,color,icon,status:'active',isPrimary:false,isFavorite:false,sortOrder:Date.now()};
+ tx.set(ref,{...club,...common});
+ activities.forEach((name,i)=>tx.set(refs[i],{...common,id:refs[i].id,clubId:id,name,color:category==='hiking'&&template.activities.includes(name)?['#2F6B4F','#BCA8E8','#F4D36A','#A5D8F3'][template.activities.indexOf(name)]:color,icon,templateId:category,sortOrder:i,isHidden:false}));
+ return club;
+ });
+}
