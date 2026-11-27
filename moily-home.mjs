@@ -7,11 +7,11 @@ export function homeSummary(data,now=new Date()){
  const records=(data.schedules||[]).filter(s=>s.deletedAt==null&&ids.has(s.clubId)&&['planned','completed'].includes(s.status)&&typeof s.startDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s.startDate));
  return {clubs,records,monthly:records.filter(s=>s.startDate.startsWith(month)).length,upcoming:records.filter(s=>s.status==='planned'&&(s.endDate||s.startDate)>=today)};
 }
-export function renderHome(data,templates){
+export function renderHome(data,templates,layout){
  const root=el('div','moily-home'),summary=homeSummary(data),ready=Array.isArray(data.clubs)&&Array.isArray(data.schedules);
  const hero=el('section','moily-panel moily-stack home-hero');
  hero.append(el('p','moily-caption',(data.profile?.nickname||'회원')+'님, 안녕하세요!'),el('h2','moily-heading','함께하는 오늘,\n설레는 내일.'),el('p','moily-caption','이번 달 모임'),el('p','moily-number',data.error?'확인 필요':ready?summary.monthly+'개':'확인 중…'));
- root.append(hero);
+ 
  const section=el('section','home-clubs');section.append(el('h2','moily-card-title','내 동호회'));
  if(data.error)section.append(el('p','moily-caption','일부 데이터를 불러오지 못했어요. 새로고침해 주세요.'));
  if(!Array.isArray(data.clubs))section.append(el('p','moily-caption','동호회 확인 중…'));
@@ -22,7 +22,15 @@ export function renderHome(data,templates){
  const link=el('a','home-club-link');link.href='#clubs';link.setAttribute('aria-label',c.name+' · 동호회 메뉴');link.append(card);
  if(i===0){card.classList.add('home-featured');section.append(link);}else others.append(link);
  });if(others.childElementCount)section.append(others);}
- root.append(section,homeCalendar(data,summary),homeUpcoming(data,summary),homeGoals(data));return root;
+ const cards={hero,clubs:section,calendar:homeCalendar(data,summary),upcoming:homeUpcoming(data,summary),goals:homeGoals(data)};
+ const h=layout?.homeLayout,order=[...new Set([...(h?.order||[]),...Object.keys(cards)])].filter(k=>Object.hasOwn(cards,k));
+ root.dataset.cardSize=['compact','standard','large'].includes(h?.cardSize)?h.cardSize:'standard';
+ for(const key of order){if(!h?.hidden?.includes(key)){cards[key].dataset.homeCard=key;root.append(cards[key]);}}
+ if(!root.childElementCount)root.append(el('p','moily-panel','모든 홈 카드가 숨겨져 있어요. 레이아웃 설정에서 다시 표시할 수 있어요.'));
+ const quick=el('section','moily-panel moily-stack home-quick');quick.append(el('h2','moily-card-title','빠른 등록'));
+ const grid=el('div','home-quick-grid');
+ for(const [label,route] of [['일정 등록','calendar'],['활동 기록','activity'],['동호회 추가','clubs'],['목표 추가','activity']]){const a=el('a','moily-button moily-button-secondary',label);a.href='#'+route;a.setAttribute('aria-label',label+' 메뉴로 이동 (등록 기능 준비 중)');grid.append(a);}
+ quick.append(grid,el('p','moily-caption','등록 기능은 각 메뉴 개발 단계에서 연결됩니다.'));root.append(quick);return root;
 }
 
 const weekdays=['일','월','화','수','목','금','토'];
