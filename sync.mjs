@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, OAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, OAuthProvider, onAuthStateChanged, signInWithPopup, linkWithPopup, reload, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, getDoc, serverTimestamp, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const app = initializeApp({
@@ -228,4 +228,22 @@ export async function completeMoilyOnboarding(uid){
 export function loginKakao() {
  const kakao = new OAuthProvider('oidc.kakao');
  return signInWithPopup(auth,kakao);
+}
+
+export async function getMoilyLoginMethods(uid) {
+ const user=auth.currentUser;
+ if(!user||user.uid!==uid)throw new Error('Account mismatch');
+ await reload(user);
+ if(auth.currentUser!==user)throw new Error('Account changed');
+ return user.providerData.map(p=>p.providerId);
+}
+export async function linkMoilyLogin(uid,kind) {
+ const user=auth.currentUser;
+ if(!user||user.uid!==uid)throw new Error('Account mismatch');
+ if(kind!=='google'&&kind!=='kakao')throw new Error('Invalid provider');
+ const p=kind==='google'?new GoogleAuthProvider():new OAuthProvider('oidc.kakao');
+ if(kind==='google')p.setCustomParameters({prompt:'select_account'});
+ if(user.providerData.some(x=>x.providerId===p.providerId))return;
+ const result=await linkWithPopup(user,p);
+ if(result.user.uid!==uid||auth.currentUser?.uid!==uid)throw new Error('Account changed');
 }
