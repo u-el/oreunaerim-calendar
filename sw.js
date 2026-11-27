@@ -1,12 +1,11 @@
 'use strict';
 
 // 오르내림 캘린더 오프라인 지원
-// - 첫 화면(HTML): 네트워크 우선, 신호가 약하면 4초 뒤 저장본으로 열기
-// - 앱 파일(js, css, 이미지): 저장본으로 바로 열고 뒤에서 새 버전 받기
+// - HTML 및 앱 파일: 요청 주소별 네트워크 우선, 연결 실패 시 동일 주소 저장본
 // - Firebase SDK, Pretendard 글꼴: 버전이 주소에 들어 있어 저장본 우선
 // - 일정 데이터, 로그인, 날씨 요청은 건드리지 않음
 
-const CACHE = 'moily-dev-offline-v1';
+const CACHE = 'moily-dev-offline-v2';
 const CORE = [
   './',
   './index.html',
@@ -30,59 +29,24 @@ self.addEventListener('activate', event => {
     .then(() => self.clients.claim()));
 });
 
-async function remember(request, response) {
-  if (!response || !response.ok || (response.type !== 'basic' && response.type !== 'cors')) return response;
-  const cache = await caches.open(CACHE);
-  const url = new URL(request.url);
-  if (url.origin === self.location.origin && url.search) {
-    // 같은 파일의 예전 버전(?v=...)은 지워서 저장 공간이 쌓이지 않게 함
-    for (const old of await cache.keys()) {
-      const oldUrl = new URL(old.url);
-      if (oldUrl.pathname === url.pathname && oldUrl.search !== url.search) await cache.delete(old);
-    }
-  }
-  await cache.put(request, response.clone());
-  return response;
+async function remember(request,response){
+ if(response?.ok && !response.redirected && ['basic','cors'].includes(response.type)){
+  try{await (await caches.open(CACHE)).put(request,response.clone());}catch{}
+ }
+ return response;
 }
-
-async function page(request) {
-  // 브라우저에 저장된 예전 첫 화면(GitHub Pages는 10분간 저장)을 건너뛰고 항상 새로 확인
-  const network = fetch(request.url, {cache:'no-cache', credentials:'same-origin'}).then(response => remember(new Request('./index.html'), response));
-  const slow = new Promise(resolve => setTimeout(resolve, 4000));
-  try {
-    const response = await Promise.race([network, slow]);
-    if (response) return response;
-  } catch {}
-  const saved = await caches.match('./index.html');
-  if (saved) {
-    network.catch(() => {});
-    return saved;
-  }
-  return network;
+async function fresh(request){
+ const cache=await caches.open(CACHE);
+ try{return await remember(request,await fetch(request,{cache:'no-cache'}));}
+ catch(error){const saved=await cache.match(request);if(saved)return saved;throw error;}
 }
-
-async function asset(request, event) {
-  const saved = await caches.match(request);
-  const network = fetch(request).then(response => remember(request, response));
-  if (saved) {
-    event.waitUntil(network.catch(() => {}));
-    return saved;
-  }
-  return network;
+async function sdk(request){
+ return (await (await caches.open(CACHE)).match(request)) || fetch(request).then(response=>remember(request,response));
 }
-
-async function sdk(request) {
-  return (await caches.match(request)) || fetch(request).then(response => remember(request, response));
-}
-
-self.addEventListener('fetch', event => {
-  const {request} = event;
-  if (request.method !== 'GET') return;
-  const url = new URL(request.url);
-  if (url.origin === self.location.origin) {
-    if (request.mode === 'navigate') event.respondWith(page(request));
-    else if (!url.pathname.endsWith('/sw.js')) event.respondWith(asset(request, event));
-  } else if ((url.hostname === SDK_HOST && url.pathname.startsWith('/firebasejs/')) || request.url.startsWith(FONT_PREFIX)) {
-    event.respondWith(sdk(request));
-  }
+self.addEventListener('fetch',event=>{
+ const {request}=event;if(request.method!=='GET')return;
+ const url=new URL(request.url);
+ if(url.origin===self.location.origin && url.href.startsWith(self.registration.scope)){
+  if(!url.pathname.endsWith('/sw.js'))event.respondWith(fresh(request));
+ }else if((url.hostname===SDK_HOST&&url.pathname.startsWith('/firebasejs/'))||request.url.startsWith(FONT_PREFIX))event.respondWith(sdk(request));
 });
