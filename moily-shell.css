@@ -78,3 +78,12 @@
 .home-club-link article{width:100%;min-width:0;height:100%}
 .home-other-clubs{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px}
 .home-other-clubs .home-club-link{flex:0 0 min(320px,90%);scroll-snap-align:start}
+
+.home-calendar-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.home-calendar-head button{min-width:44px;min-height:44px;font-size:20px}
+.home-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.home-calendar-grid .moily-day{width:100%;min-width:0;height:48px;padding:4px}
+.home-calendar-grid .moily-day[aria-current=date]{outline:1px solid var(--moily-action);outline-offset:-2px}
+.home-calendar-grid .moily-marker{width:8px;height:8px;border-radius:2px}
+.home-goal-featured{background:var(--moily-forest);color:#fff}
+.home-goal-featured .moily-caption,.home-goal-featured .moily-card-title,.home-goal-featured .moily-number{color:inherit}
