@@ -1,6 +1,10 @@
 import {button} from './moily-components.mjs';
 const $=id=>document.getElementById(id);
-let api, busy=false, account=null, ready=false;
+let api, busy=false, account=null, ready=false, generation=0, leaving=false;
+const home=new URL('./',location.href);home.hash=location.hash;
+$('welcome-start').href=home.href;
+$('login-retry').onclick=()=>location.reload();
+function goHome(){if(leaving)return;leaving=true;location.replace(home.href);}
 const status=t=>{$('status').textContent=t;};
 const kakao=$('kakao');
 function refreshLogin(){google.disabled=kakao.disabled=!ready||busy||!!account;}
@@ -23,9 +27,9 @@ const all=$('all-consent');
 let saving=false;
 const next=button('다음',{disabled:true,onClick:async()=>{
  if(saving||!account||!choices[0].checked||!choices[1].checked)return;
- const uid=account.uid;saving=true;refreshConsent();
+ const uid=account.uid,g=generation;saving=true;refreshConsent();
  try{await api.saveMoilyConsent(uid,{terms:choices[0].checked,privacy:choices[1].checked,marketing:choices[2].checked});
- if(account?.uid!==uid)return;
+ if(account?.uid!==uid||g!==generation)return;
  showProfile();
  }catch{if(account?.uid===uid)status('동의를 저장하지 못했어요. 다시 시도해 주세요.');}
  finally{saving=false;refreshConsent();}
@@ -38,10 +42,10 @@ let draftProfile=null,profileSaving=false;
 const nickname=$('nickname'), interests=[...$('interests').querySelectorAll('input')];
 const profileNext=button('다음',{disabled:true,onClick:async()=>{
  if(profileSaving||!account||!nickname.value.trim()||nickname.value.trim().length>20)return;
- const uid=account.uid;profileSaving=true;refreshProfile();
- try{draftProfile=await api.saveMoilyProfile(uid,nickname.value,interests.filter(x=>x.checked).map(x=>x.value));
- if(account?.uid!==uid)return;
- await resumeClub();
+ const uid=account.uid,g=generation;profileSaving=true;refreshProfile();
+ try{const saved=await api.saveMoilyProfile(uid,nickname.value,interests.filter(x=>x.checked).map(x=>x.value));
+ if(account?.uid!==uid||g!==generation)return;
+ draftProfile=saved;await resumeClub();
  }catch{if(account?.uid===uid)status('프로필을 저장하지 못했어요. 다시 시도해 주세요.');}
  finally{profileSaving=false;refreshProfile();}
 }});
@@ -66,9 +70,9 @@ function refreshClub(){
  [clubName,clubDescription,clubColor,...$('club-types').querySelectorAll('input')].forEach(x=>x.disabled=clubSaving);
 }
 async function finishClub(){
- const uid=account.uid;
+ const uid=account.uid,g=generation;
  const result=await api.completeMoilyOnboarding(uid);
- if(account?.uid!==uid)return;
+ if(account?.uid!==uid||g!==generation)return;
  $('club-step').hidden=true;$('profile-step').hidden=true;$('continue').hidden=true;
  $('welcome-name').textContent=result.nickname+'님, 모일리에 오신 것을 환영해요!';
  const card=$('welcome-club');card.hidden=!result.club;card.textContent='';
@@ -94,15 +98,15 @@ function showClub(){
  clubName.value='';clubDescription.value='';clubColor.value=api.moilyClubTemplates[selectedClubType()].color;refreshClub();$('club-step').hidden=false;status('첫 동호회를 만들거나 나중에 만들 수 있어요.');
 }
 async function resumeClub(){const uid=account.uid;const existing=await api.getMoilyFirstClub(uid);if(account?.uid!==uid)return;if(existing){showClub();clubName.value=existing.name;clubDescription.value=existing.description||'';clubColor.value=existing.color;const radio=[...$('club-types').querySelectorAll('input')].find(x=>x.value===existing.category);if(radio)radio.checked=true;refreshClub();await finishClub();}else showClub();}
-try{api=await import('./sync.mjs');let generation=0;api.observeAccount(async user=>{
- const current=++generation;account=user;draftProfile=null;$('welcome').hidden=true;$('welcome-name').textContent='';$('welcome-club').textContent='';$('club-step').hidden=true;clubName.value='';clubDescription.value='';$('profile-step').hidden=true;nickname.value='';interests.forEach(x=>x.checked=false);refreshProfile();$('consent').hidden=true;choices.forEach(x=>x.checked=false);refreshConsent();ready=true;refreshLogin();
+try{api=await import('./sync.mjs');api.observeAccount(async user=>{
+ const current=++generation;account=user;$('login-retry').hidden=true;draftProfile=null;$('welcome').hidden=true;$('welcome-name').textContent='';$('welcome-club').textContent='';$('club-step').hidden=true;clubName.value='';clubDescription.value='';$('profile-step').hidden=true;nickname.value='';interests.forEach(x=>x.checked=false);refreshProfile();$('consent').hidden=true;choices.forEach(x=>x.checked=false);refreshConsent();ready=true;refreshLogin();
  $('google').hidden=!!user;kakao.hidden=!!user;$('continue').hidden=true;$('logout').hidden=!user;
  if(!user){status('Google 또는 카카오 계정으로 로그인해 주세요.');return;}
  status('모일리 프로필 확인 중…');
  try{const profile=await api.ensureMoilyProfile(user.uid);if(current!==generation)return;draftProfile=profile;
- if(profile.onboardingCompleted===true){status('모일리 가입 완료 계정입니다.');location.replace('./');return;}
+ if(profile.onboardingCompleted===true){status('모일리 가입 완료 계정입니다.');goHome();return;}
  const consent=await api.getMoilyConsent(user.uid);if(current!==generation)return;
  if(consent?.termsVersion==='test-1'&&consent?.privacyVersion==='test-1'&&consent.termsAccepted===true&&consent.privacyAccepted===true){await resumeProfile();}
  else{status('가입을 위해 약관에 동의해 주세요.');$('consent').hidden=false;}
- }catch(e){if(current!==generation)return;status('프로필을 확인하지 못했어요. 연결 및 개발용 보안 규칙을 확인한 뒤 새로고침해 주세요.');}
- });}catch{status('인증을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.');}
+ }catch(e){if(current!==generation)return;$('login-retry').hidden=false;status('프로필을 확인하지 못했어요. 연결 및 개발용 보안 규칙을 확인한 뒤 새로고침해 주세요.');}
+ });}catch{$('login-retry').hidden=false;status('인증을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.');}
