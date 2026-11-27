@@ -10,7 +10,7 @@ applyDevice();
 function route(){const key=location.hash.slice(1);return Object.hasOwn(routes,key)?key:'home';}
 function render(){if(!uid)return;const next=route();if(current===next)return;if(current)scrolls.set(current,window.scrollY);current=next;
 $('shell-title').textContent=routes[next];document.title=routes[next]+' · 모일리';
-$('shell-nav').replaceChildren(navigation(Object.entries(routes).map(([key,label])=>({label,active:key===next,href:'#'+key}))));
+$('shell-nav-items').replaceChildren(navigation(Object.entries(routes).map(([key,label])=>({label,active:key===next,href:'#'+key}))));
 const panel=document.createElement('section');panel.className='moily-panel';const p=document.createElement('p');p.textContent='이 메뉴의 실제 기능은 이후 개발 단계에서 연결됩니다.';panel.append(p);
 if(next==='calendar'||next==='home'){const a=document.createElement('a');a.href='./';a.textContent='기존 개발용 캘린더 열기';panel.append(a);}
 if(next==='my'){const a=document.createElement('a');a.href='moily-account.html';a.textContent='로그인 계정 연결';panel.append(a);}
