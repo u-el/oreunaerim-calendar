@@ -2889,7 +2889,7 @@ function changeAccount(user) {
     cloudReady = true;
     showingSavedCopy = Boolean(fromCache) && !navigator.onLine;
     records = incoming.filter(record => record.deleted !== true);
-    status.textContent = (showingSavedCopy ? '오프라인 · 저장해 둔 일정 보는 중: ' : '동기화 중: ') + (user.email || 'Google 계정');
+    status.textContent = (showingSavedCopy ? '오프라인 · 저장해 둔 일정 보는 중: ' : '동기화 중: ') + (user.email || '모일리 계정');
     renderOfflineBanner();
     try {
       const cloudIds = new Set(incoming.map(record => record.id));
@@ -2916,7 +2916,7 @@ async function runAccountAction(action, errorMessage) {
   finally { setSyncBusy(false); }
 }
 
-if ($('#sync-status')) import('./sync.mjs?v=short-share').then(module => {
+if ($('#sync-status')) import('./sync.mjs').then(module => {
   sync = module;
   resolveSync(module);
   updateScheduleShare();
