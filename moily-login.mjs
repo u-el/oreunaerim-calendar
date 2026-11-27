@@ -2,11 +2,20 @@ import {button} from './moily-components.mjs';
 const $=id=>document.getElementById(id);
 let api, busy=false, account=null, ready=false;
 const status=t=>{$('status').textContent=t;};
-const google=button('Google로 계속하기',{variant:'secondary',disabled:true,onClick:async()=>{
- if(!ready||busy||account)return;busy=true;google.disabled=true;status('Google 로그인 진행 중…');
- try{await api.login();}catch(e){status(e?.code==='auth/popup-blocked'?'팝업을 허용하고 다시 시도해 주세요.':e?.code==='auth/popup-closed-by-user'?'로그인이 취소되었어요. 다시 시도할 수 있어요.':'로그인하지 못했어요. 외부 브라우저에서 다시 시도해 주세요.');}finally{busy=false;google.disabled=!ready||!!account;}
-}});
+const kakao=$('kakao');
+function refreshLogin(){google.disabled=kakao.disabled=!ready||busy||!!account;}
+async function signIn(kind){
+ if(!ready||busy||account)return;
+ busy=true;refreshLogin();status(kind==='kakao'?'카카오 로그인 진행 중…':'Google 로그인 진행 중…');
+ try{await (kind==='kakao'?api.loginKakao():api.login());}
+ catch(e){
+ const messages={'auth/popup-blocked':'팝업을 허용하고 다시 시도해 주세요.','auth/popup-closed-by-user':'로그인이 취소되었어요. 다시 시도할 수 있어요.','auth/cancelled-popup-request':'로그인이 취소되었어요. 다시 시도해 주세요.','auth/operation-not-allowed':'로그인 제공업체 설정을 확인해 주세요.','auth/unauthorized-domain':'허용된 인증 도메인을 확인해 주세요.','auth/account-exists-with-different-credential':'기존 로그인 방법으로 로그인해 주세요. 계정은 자동으로 통합되지 않아요.','auth/too-many-requests':'로그인 요청 한도에 도달했어요. 잠시 후 다시 시도해 주세요.','auth/network-request-failed':'인터넷 연결을 확인하고 다시 시도해 주세요.'};
+ if(!account)status(messages[e?.code]||'로그인하지 못했어요. 외부 브라우저에서 다시 시도해 주세요.');
+ }finally{busy=false;refreshLogin();}
+}
+const google=button('Google로 계속하기',{variant:'secondary',disabled:true,onClick:()=>signIn('google')});
 $('google').append(google);
+kakao.addEventListener('click',()=>signIn('kakao'));
 const out=button('로그아웃',{variant:'secondary',onClick:async()=>{out.disabled=true;try{await api.logout();}catch{status('로그아웃하지 못했어요. 다시 시도해 주세요.');out.disabled=false;}}});
 $('logout').append(out);
 const choices=['terms','privacy','marketing'].map($);
@@ -86,9 +95,9 @@ function showClub(){
 }
 async function resumeClub(){const uid=account.uid;const existing=await api.getMoilyFirstClub(uid);if(account?.uid!==uid)return;if(existing){showClub();clubName.value=existing.name;clubDescription.value=existing.description||'';clubColor.value=existing.color;const radio=[...$('club-types').querySelectorAll('input')].find(x=>x.value===existing.category);if(radio)radio.checked=true;refreshClub();await finishClub();}else showClub();}
 try{api=await import('./sync.mjs');let generation=0;api.observeAccount(async user=>{
- const current=++generation;account=user;draftProfile=null;$('welcome').hidden=true;$('welcome-name').textContent='';$('welcome-club').textContent='';$('club-step').hidden=true;clubName.value='';clubDescription.value='';$('profile-step').hidden=true;nickname.value='';interests.forEach(x=>x.checked=false);refreshProfile();$('consent').hidden=true;choices.forEach(x=>x.checked=false);refreshConsent();ready=true;google.disabled=busy||!!user;
- $('google').hidden=!!user;$('continue').hidden=true;$('logout').hidden=!user;
- if(!user){status('Google 계정으로 로그인해 주세요.');return;}
+ const current=++generation;account=user;draftProfile=null;$('welcome').hidden=true;$('welcome-name').textContent='';$('welcome-club').textContent='';$('club-step').hidden=true;clubName.value='';clubDescription.value='';$('profile-step').hidden=true;nickname.value='';interests.forEach(x=>x.checked=false);refreshProfile();$('consent').hidden=true;choices.forEach(x=>x.checked=false);refreshConsent();ready=true;refreshLogin();
+ $('google').hidden=!!user;kakao.hidden=!!user;$('continue').hidden=true;$('logout').hidden=!user;
+ if(!user){status('Google 또는 카카오 계정으로 로그인해 주세요.');return;}
  status('모일리 프로필 확인 중…');
  try{const profile=await api.ensureMoilyProfile(user.uid);if(current!==generation)return;draftProfile=profile;
  if(profile.onboardingCompleted===true){status('모일리 가입 완료 계정입니다.');location.replace('./');return;}
