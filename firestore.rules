@@ -178,7 +178,17 @@ service cloud.firestore {
       allow read: if owner(uid);
       allow create, update: if owner(uid) && id in ['common','mobile','tablet','desktop']
         && request.resource.data.keys().hasOnly(['theme','brandColor','fontScale','homeLayout','deviceLayouts','calendarView','primaryGoalId','calendarColorMode','updatedAt'])
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.updatedAt == request.time
+        && (!('theme' in request.resource.data) || request.resource.data.theme in ['system','light','dark'])
+        && (!('calendarView' in request.resource.data) || request.resource.data.calendarView in ['month','week','list'])
+        && (!('homeLayout' in request.resource.data) || validHomeLayout(request.resource.data.homeLayout));
+      function validHomeLayout(h) {
+        let cards = ['hero','clubs','calendar','upcoming','goals'];
+        return h is map && h.keys().hasOnly(['order','hidden','cardSize'])
+          && h.order is list && h.order.size() == 5 && h.order.hasOnly(cards) && h.order.hasAll(cards)
+          && h.hidden is list && h.hidden.size() <= 5 && h.hidden.hasOnly(cards) && h.hidden.toSet().size() == h.hidden.size()
+          && h.cardSize in ['standard','compact','large'];
+      }
     }
     // Trusted backend only until attachment, migration and backup workflows are implemented.
     match /accounts/{uid}/{collection}/{id} {
