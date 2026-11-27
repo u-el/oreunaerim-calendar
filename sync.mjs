@@ -282,3 +282,17 @@ export function observeMoilyLayout(uid,device,onLayout,onError){
 export function saveMoilyLayout(uid,device,layout){
  return setDoc(moilyLayoutRef(uid,device),{...normalizeMoilyLayout(layout),updatedAt:serverTimestamp()},{merge:true});
 }
+
+export function observeMoilyHome(uid,onData,onError){
+ if(auth.currentUser?.uid!==uid)throw new Error('Account mismatch');
+ const state={clubs:null,schedules:null};const stops=[];
+ let active=true;
+ const watch=(key,path,isCollection)=>onSnapshot(isCollection?collection(db,'accounts',uid,...path):doc(db,'accounts',uid,...path),{includeMetadataChanges:true},snap=>{
+ if(!active||auth.currentUser?.uid!==uid)return;
+ state[key]=isCollection?snap.docs.map(d=>({...d.data(),id:d.id})):snap.data()||{};
+ onData({...state});
+ },error=>{if(active&&auth.currentUser?.uid===uid)onError(key,error);});
+ try{stops.push(watch('clubs',['clubs'],true),watch('schedules',['schedulesV2'],true),watch('profile',['settings','moilyProfile'],false));}
+ catch(error){active=false;stops.forEach(stop=>stop());throw error;}
+ return ()=>{active=false;stops.forEach(stop=>stop());};
+}
