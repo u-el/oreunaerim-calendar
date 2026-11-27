@@ -82,5 +82,22 @@ try {
  await assertFails(setDoc(doc(b,'accounts/bob/settings/moilyProfile'),{...draft,nickname:'Bob',onboardingCompleted:true}));
  await assertSucceeds(setDoc(doc(b,'accounts/bob/settings/moilyProfile'),{...draft,nickname:'Bob'}));
  await assertSucceeds(updateDoc(doc(b,'accounts/bob/settings/moilyProfile'),{onboardingCompleted:true,updatedAt:serverTimestamp()}));
- console.log('64 assertions passed');
+ const common='accounts/alice/preferences/common', mobile='accounts/alice/preferences/mobile', desktop='accounts/alice/preferences/desktop';
+ const layout={order:['hero','clubs','calendar','upcoming','goals'],hidden:[],cardSize:'standard'};
+ await assertSucceeds(setDoc(doc(a,common),{theme:'dark',updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,common),{theme:'invalid',updatedAt:serverTimestamp()}));
+ await assertSucceeds(setDoc(doc(a,mobile),{homeLayout:layout,calendarView:'month',updatedAt:serverTimestamp()}));
+ await assertSucceeds(setDoc(doc(a,desktop),{homeLayout:{...layout,cardSize:'large'},calendarView:'week',updatedAt:serverTimestamp()}));
+ await assertFails(getDoc(doc(b,mobile)));
+ await assertFails(getDoc(doc(guest,mobile)));
+ await assertFails(updateDoc(doc(b,mobile),{calendarView:'list',updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,mobile),{calendarView:'invalid',updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,mobile),{homeLayout:{...layout,order:Array(5).fill('hero')},updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,mobile),{homeLayout:{...layout,hidden:['hero','hero']},updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,mobile),{homeLayout:{...layout,cardSize:'invalid'},updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(a,mobile),{homeLayout:{...layout,hidden:['unknown']},updatedAt:serverTimestamp()}));
+ await assertSucceeds(updateDoc(doc(a,mobile),{homeLayout:{...layout,hidden:['hero']},updatedAt:serverTimestamp()}));
+ await assertSucceeds(updateDoc(doc(a,mobile),{homeLayout:layout,calendarView:'month',updatedAt:serverTimestamp()}));
+ if((await getDoc(doc(a,desktop))).data().calendarView!=='week'||(await getDoc(doc(a,common))).data().theme!=='dark')throw new Error('Preference isolation failed');
+ console.log('All rules assertions and preference isolation checks passed');
 } finally { await env.cleanup(); }
