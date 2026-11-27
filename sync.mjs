@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, OAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence, collection, doc, getDoc, serverTimestamp, onSnapshot, runTransaction, setDoc } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 const app = initializeApp({
@@ -223,4 +223,9 @@ export async function completeMoilyOnboarding(uid){
  if(!profile.onboardingCompleted)tx.update(ref,{onboardingCompleted:true,updatedAt:serverTimestamp()});
  return {nickname:profile.nickname,club:club.exists()?club.data():null};
  });
+}
+
+export function loginKakao() {
+ const kakao = new OAuthProvider('oidc.kakao');
+ return signInWithPopup(auth,kakao);
 }
