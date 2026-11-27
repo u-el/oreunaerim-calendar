@@ -87,3 +87,5 @@
 .home-calendar-grid .moily-marker{width:8px;height:8px;border-radius:2px}
 .home-goal-featured{background:var(--moily-forest);color:#fff}
 .home-goal-featured .moily-caption,.home-goal-featured .moily-card-title,.home-goal-featured .moily-number{color:inherit}
+
+.home-quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.home-quick-grid a{justify-content:center;text-align:center;text-decoration:none;min-width:0;min-height:48px;border:1px solid var(--moily-border);border-radius:12px;background:var(--moily-card);color:var(--moily-text);padding:12px;overflow-wrap:anywhere}.moily-home[data-card-size=compact]{gap:12px}.moily-home[data-card-size=compact] .moily-panel{padding:12px;gap:8px}.moily-home[data-card-size=large]{gap:32px}.moily-home[data-card-size=large] .moily-panel{padding:24px;gap:16px}.moily-home[data-card-size=large] .home-calendar-grid .moily-day{height:56px}.moily-home[data-card-size=compact] .home-calendar-grid .moily-day{height:44px}
