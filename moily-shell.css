@@ -100,3 +100,5 @@
 .moily .moily-home[data-card-size=large] .moily-panel{padding:24px;gap:16px}
 
 .moily-clubs-view{display:flex;flex-direction:column;gap:16px;min-width:0}.clubs-filters{display:flex;gap:8px;flex-wrap:wrap}.moily .clubs-filters button{min-height:44px;background:var(--moily-card);color:var(--moily-text);border:1px solid var(--moily-border);padding:8px 12px}.moily .clubs-filters button[aria-pressed=true]{background:#2F6B4F;color:white}.moily .moily-clubs-view .clubs-primary{background:#183C2B;color:white;padding:20px}.moily .clubs-primary :is(p,h3){color:inherit}.clubs-card{overflow-wrap:anywhere}
+
+.clubs-create,.clubs-create-fields,.clubs-field{display:flex;flex-direction:column;gap:12px;min-width:0}.clubs-create-fields{border:0;padding:0;margin:0}.clubs-field .moily-input{width:100%;box-sizing:border-box}.clubs-field textarea{min-height:80px;resize:vertical}.clubs-color{width:64px;height:44px;background:var(--moily-card);border:1px solid var(--moily-border);border-radius:8px}.clubs-create-fields:disabled{opacity:.7}
