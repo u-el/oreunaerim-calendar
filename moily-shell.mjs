@@ -1,4 +1,4 @@
-import {navigation,button} from './moily-components.mjs';
+import {navigation} from './moily-components.mjs';
 const $=id=>document.getElementById(id);
 const routes={home:'홈',clubs:'동호회',calendar:'캘린더',activity:'활동 기록',my:'마이'};
 const scrolls=new Map();let current=null,uid=null,generation=0;
@@ -7,7 +7,7 @@ const labels={desktop:'PC',tablet:'태블릿',mobile:'모바일'};
 function applyDevice(){document.body.dataset.device=device();$('shell-device').textContent=labels[device()]+' 레이아웃';}
 for(const q of ['(min-width:768px)','(min-width:1200px)'])matchMedia(q).addEventListener('change',applyDevice);
 applyDevice();
-function route(){const key=location.hash.slice(1);return Object.hasOwn(routes,key)?key:'home';}
+function route(){const key=location.hash.slice(1);if(Object.hasOwn(routes,key))return key;history.replaceState(history.state,'',location.pathname+location.search+'#home');return 'home';}
 function render(){if(!uid)return;const next=route();if(current===next)return;if(current)scrolls.set(current,window.scrollY);current=next;
 $('shell-title').textContent=routes[next];document.title=routes[next]+' · 모일리';
 $('shell-nav-items').replaceChildren(navigation(Object.entries(routes).map(([key,label])=>({label,active:key===next,href:'#'+key}))));
@@ -17,6 +17,8 @@ if(next==='my'){const a=document.createElement('a');a.href='moily-account.html';
 $('shell-content').replaceChildren(panel);$('shell-main').focus({preventScroll:true});window.scrollTo(0,scrolls.get(next)||0);}
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 window.addEventListener('hashchange',render);
+document.querySelector('.shell-skip').addEventListener('click',event=>{event.preventDefault();if(uid){$('shell-main').focus();$('shell-main').scrollIntoView({block:'start'});}else{$('shell-status').setAttribute('tabindex','-1');$('shell-status').focus();}});
+for(const link of document.querySelectorAll('.shell-home-link'))link.addEventListener('click',event=>{if(uid&&current==='home'){event.preventDefault();$('shell-main').focus({preventScroll:true});window.scrollTo(0,0);}});
 $('shell-retry').onclick=()=>location.reload();
 function fail(){ $('shell').hidden=true;$('shell-status').hidden=false;$('shell-message').textContent='계정 확인에 실패했어요.';$('shell-retry').hidden=false;}
 try{const api=await import('./sync.mjs');api.observeAccount(async user=>{const g=++generation;$('shell').hidden=true;$('shell-status').hidden=false;$('shell-message').textContent='계정 확인 중…';$('shell-retry').hidden=true;uid=null;current=null;scrolls.clear();if(!user){location.replace('moily-login.html');return;}try{const p=await api.ensureMoilyProfile(user.uid);if(g!==generation)return;if(!p.onboardingCompleted){location.replace('moily-login.html');return;}uid=user.uid;$('shell-status').hidden=true;$('shell').hidden=false;render();}catch{if(g===generation)fail();}});}catch{fail();}
