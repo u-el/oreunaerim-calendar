@@ -57,3 +57,12 @@
 .shell-header-tools{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
 .shell-header-tools button{font:inherit;font-size:12px;min-height:44px;padding:8px;border:1px solid var(--moily-border);border-radius:8px;background:var(--moily-card);color:var(--moily-text);opacity:.65;cursor:not-allowed}
 @media(min-width:1200px){.shell-header-row{justify-content:flex-end}.shell-desktop-brand .shell-home-link:focus-visible{outline-color:#fff}}
+
+/* Temporary layout settings panel */
+.shell-aside{display:grid;gap:16px;align-content:start}
+#layout-fields{min-width:0;max-width:100%;margin:0;padding:8px;border:1px solid var(--moily-border);border-radius:12px;display:grid;gap:8px}
+#layout-fields select,#layout-fields button{max-width:100%;min-width:0;white-space:normal}
+#layout-cards{display:grid;gap:8px}
+#layout-cards>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+#layout-cards label{flex:1 1 100px;overflow-wrap:anywhere}
+#layout-cards button{min-height:44px;color:var(--moily-text);background:var(--moily-card);border:1px solid var(--moily-border);border-radius:8px}
