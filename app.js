@@ -30,12 +30,7 @@ const blank = () => ({
 });
 let records = [];
 let readError = false;
-try {
-  const saved = localStorage.getItem(key);
-  if (saved) records = JSON.parse(saved);
-} catch {
-  readError = true;
-}
+// Account records are loaded only after Firebase authentication. Local records remain available for explicit import.
 
 const localRecords = () => {
   const saved = JSON.parse(localStorage.getItem(key) || '[]');
@@ -2874,11 +2869,7 @@ function changeAccount(user) {
   const status = $('#sync-status');
   records = [];
   if (!user) {
-    try {
-      records = localRecords();
-      readError = false;
-    } catch { readError = true; }
-    status.textContent = '이 브라우저에 저장 중';
+    status.textContent = '로그인이 필요해요.';
     render();
     return;
   }
