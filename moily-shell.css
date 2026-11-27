@@ -19,3 +19,16 @@
  #shell-nav .moily-nav-item[aria-current=page]{background:var(--moily-action);color:var(--moily-on-action)}
  #shell-nav .moily-nav-item:focus-visible{outline:2px solid #fff;outline-offset:-2px}
 }
+
+/* Tablet shell: two fluid columns, document-flow navigation. */
+@media (min-width:768px) and (max-width:1199.98px){
+ #shell{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto 1fr auto;align-items:start;min-height:100vh;min-height:100dvh;gap:var(--moily-space-16);padding:max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left))}
+ .shell-header{display:flex;align-items:center;flex-wrap:wrap;gap:var(--moily-space-16)}
+ .shell-header .moily-display{font-size:24px}
+ #shell-main,.shell-aside,.shell-content{min-width:0;overflow-wrap:anywhere;align-content:start}
+ #shell-main .moily-stack,.shell-aside .moily-stack,#shell-main .moily-field,.shell-aside .moily-field{width:100%;max-width:100%}
+ #shell-main img,.shell-aside img,#shell-main video,.shell-aside video{max-width:100%;height:auto}
+ #shell-nav{position:static;align-self:end;margin-top:8px}
+ #shell-nav .moily-nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;min-height:100px;align-items:start;padding:8px}
+ #shell-nav .moily-nav-item{min-width:0;min-height:48px;text-align:center;overflow-wrap:anywhere}
+}
